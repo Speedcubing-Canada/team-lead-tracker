@@ -130,7 +130,8 @@ export function StageBoard({
 
   function changeStage(id: number) {
     setRoomId(id);
-    setGroupIndex(0);
+    // Land on the new stage's current/next group, not always its first.
+    setGroupIndex(defaultGroupIndex(wcif, id));
   }
 
   return (

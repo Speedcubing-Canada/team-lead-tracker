@@ -204,16 +204,23 @@ export function staffByDuty(wcif: Wcif, activityId: number): DutyGroup[] {
 
 /**
  * Derive a person's stage from their *staff* assignments: the room where they
- * have the most staff assignments. Competitor assignments are ignored. Returns
- * null when they have no staff assignments (caller falls back to manual pick).
+ * have the most staff assignments. Competitor assignments are ignored. When
+ * `onDate` (YYYY-MM-DD) is given, only assignments scheduled that day are
+ * counted — used to find the stage a lead is working *today*, since at a
+ * multi-day comp the all-time max room may be a different stage than today's.
+ * Returns null when no (matching) staff assignments exist.
  */
-export function deriveStageRoomId(wcif: Wcif, wcaUserId: number): number | null {
+export function deriveStageRoomId(wcif: Wcif, wcaUserId: number, onDate?: string): number | null {
   const person = wcif.persons.find((p) => p.wcaUserId === wcaUserId);
   if (!person) return null;
 
   const counts = new Map<number, number>();
   for (const assignment of person.assignments) {
     if (!isStaffCode(assignment.assignmentCode)) continue;
+    if (onDate != null) {
+      const activity = activityById(wcif, assignment.activityId);
+      if (!activity || dateOf(activity.startTime) !== onDate) continue;
+    }
     const roomId = roomIdForActivity(wcif, assignment.activityId);
     if (roomId == null) continue;
     counts.set(roomId, (counts.get(roomId) ?? 0) + 1);
@@ -231,11 +238,23 @@ export function deriveStageRoomId(wcif: Wcif, wcaUserId: number): number | null 
 }
 
 /**
- * The stage to land a lead on: their derived stage, falling back to the first
- * stage of the competition. Null only when the competition has no stages.
+ * The stage to land a lead on: the stage they're staffing *today* (so it lines
+ * up with the day-aware group auto-detection), falling back to their all-time
+ * derived stage, then the first stage of the competition. Null only when the
+ * competition has no stages.
  */
-export function defaultStageRoomId(wcif: Wcif, wcaUserId: number): number | null {
-  return deriveStageRoomId(wcif, wcaUserId) ?? listStages(wcif)[0]?.id ?? null;
+export function defaultStageRoomId(
+  wcif: Wcif,
+  wcaUserId: number,
+  now: Date = new Date(),
+): number | null {
+  const today = dateOf(now.toISOString());
+  return (
+    deriveStageRoomId(wcif, wcaUserId, today) ??
+    deriveStageRoomId(wcif, wcaUserId) ??
+    listStages(wcif)[0]?.id ??
+    null
+  );
 }
 
 /** WCIF roles that, on their own, grant access to a competition's tracker. */

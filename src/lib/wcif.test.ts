@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { Wcif } from "./wca";
 import { sampleWcif } from "../test/fixtures/wcif";
 import {
   activityById,
@@ -190,6 +191,12 @@ describe("deriveStageRoomId", () => {
   it("returns null for an unknown user", () => {
     expect(deriveStageRoomId(sampleWcif, 5555)).toBeNull();
   });
+
+  it("counts only the given day's assignments when onDate is passed", () => {
+    // Dave staffs Blue (room 2) via activity 201 on day 1; nothing on day 2.
+    expect(deriveStageRoomId(sampleWcif, 1004, "2026-07-01")).toBe(2);
+    expect(deriveStageRoomId(sampleWcif, 1004, "2026-07-02")).toBeNull();
+  });
 });
 
 describe("defaultStageRoomId", () => {
@@ -205,6 +212,89 @@ describe("defaultStageRoomId", () => {
   it("returns null when there are no stages", () => {
     const empty = { ...sampleWcif, schedule: { ...sampleWcif.schedule, venues: [] } };
     expect(defaultStageRoomId(empty, 1001)).toBeNull();
+  });
+
+  it("prefers the stage staffed *today* over the all-time stage", () => {
+    // P staffs room A (1) twice — but both on day 2; on day 1 P is on room B (2).
+    // All-time favours A; day-1 detection must pick B.
+    const wcif: Wcif = {
+      formatVersion: "1.0",
+      id: "TwoDay",
+      name: "Two Day Comp",
+      persons: [
+        {
+          registrantId: 1,
+          name: "Pat Page",
+          wcaUserId: 1,
+          wcaId: null,
+          countryIso2: "US",
+          roles: [],
+          assignments: [
+            { activityId: 3, assignmentCode: "staff-judge", stationNumber: null }, // room B, day 1
+            { activityId: 11, assignmentCode: "staff-judge", stationNumber: null }, // room A, day 2
+            { activityId: 12, assignmentCode: "staff-judge", stationNumber: null }, // room A, day 2
+          ],
+        },
+      ],
+      events: [],
+      schedule: {
+        startDate: "2026-07-01",
+        numberOfDays: 2,
+        venues: [
+          {
+            id: 1,
+            name: "V",
+            timezone: "UTC",
+            rooms: [
+              {
+                id: 1,
+                name: "A",
+                color: "#000000",
+                activities: [
+                  {
+                    id: 10,
+                    name: "R",
+                    activityCode: "x-r1",
+                    startTime: "2026-07-02T09:00:00Z",
+                    endTime: "2026-07-02T10:00:00Z",
+                    childActivities: [
+                      { id: 11, name: "R g1", activityCode: "x-r1-g1", startTime: "2026-07-02T09:00:00Z", endTime: "2026-07-02T09:30:00Z", childActivities: [] },
+                      { id: 12, name: "R g2", activityCode: "x-r1-g2", startTime: "2026-07-02T09:30:00Z", endTime: "2026-07-02T10:00:00Z", childActivities: [] },
+                    ],
+                  },
+                ],
+              },
+              {
+                id: 2,
+                name: "B",
+                color: "#ffffff",
+                activities: [
+                  {
+                    id: 20,
+                    name: "S",
+                    activityCode: "y-r1",
+                    startTime: "2026-07-01T09:00:00Z",
+                    endTime: "2026-07-01T10:00:00Z",
+                    childActivities: [
+                      { id: 3, name: "S g1", activityCode: "y-r1-g1", startTime: "2026-07-01T09:00:00Z", endTime: "2026-07-01T10:00:00Z", childActivities: [] },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    };
+
+    expect(deriveStageRoomId(wcif, 1)).toBe(1); // all-time: room A (2 vs 1)
+    expect(defaultStageRoomId(wcif, 1, new Date("2026-07-01T09:30:00Z"))).toBe(2); // day 1 → B
+    expect(defaultStageRoomId(wcif, 1, new Date("2026-07-02T09:30:00Z"))).toBe(1); // day 2 → A
+  });
+
+  it("falls back to the all-time stage on a day the person isn't staffing", () => {
+    // Dave only staffs on day 1; querying day 2 yields his all-time stage (Blue).
+    expect(defaultStageRoomId(sampleWcif, 1004, new Date("2026-07-02T09:30:00Z"))).toBe(2);
   });
 });
 
