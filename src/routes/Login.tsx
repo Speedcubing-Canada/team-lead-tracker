@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { grantCompetitionAccess } from "../lib/authApi";
 import { loadMyCompetitions } from "../lib/myCompetitions";
+import { ThemeToggle } from "../components/ThemeToggle";
 
 function formatRange(startDate: string, endDate: string): string {
   const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
@@ -50,10 +51,13 @@ export default function Login() {
 
   if (!user) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-6 bg-slate-50 p-6 text-center">
+      <div className="relative flex h-full flex-col items-center justify-center gap-6 bg-slate-50 p-6 text-center dark:bg-slate-900">
+        <div className="absolute right-4 top-4">
+          <ThemeToggle />
+        </div>
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Team Lead Tracker</h1>
-          <p className="mt-2 text-sm text-slate-500">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Team Lead Tracker</h1>
+          <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
             Keep track of your stage team at a WCA championship.
           </p>
         </div>
@@ -69,19 +73,22 @@ export default function Login() {
   }
 
   return (
-    <div className="flex h-full flex-col bg-slate-50">
-      <header className="flex items-center justify-between border-b border-slate-200 bg-white p-4">
+    <div className="flex h-full flex-col bg-slate-50 dark:bg-slate-900">
+      <header className="flex items-center justify-between border-b border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800">
         <div>
-          <h1 className="text-lg font-bold text-slate-900">Your competitions</h1>
-          <p className="text-xs text-slate-500">Signed in as {user.name}</p>
+          <h1 className="text-lg font-bold text-slate-900 dark:text-slate-100">Your competitions</h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400">Signed in as {user.name}</p>
         </div>
-        <button type="button" onClick={signOut} className="text-sm text-slate-500">
-          Sign out
-        </button>
+        <div className="flex items-center gap-3">
+          <ThemeToggle />
+          <button type="button" onClick={signOut} className="text-sm text-slate-500 dark:text-slate-400">
+            Sign out
+          </button>
+        </div>
       </header>
 
       <div className="flex-1 overflow-y-auto p-4">
-        {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
+        {error && <p className="mb-3 text-sm text-red-600 dark:text-red-400">{error}</p>}
 
         {competitions.length > 0 ? (
           <ul className="flex flex-col gap-2">
@@ -91,27 +98,27 @@ export default function Login() {
                   type="button"
                   onClick={() => void open(c.id)}
                   disabled={pendingId !== null}
-                  className="flex min-h-16 w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 text-left disabled:opacity-50"
+                  className="flex min-h-16 w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 text-left disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800"
                 >
                   <span>
-                    <span className="block font-semibold text-slate-900">{c.name}</span>
-                    <span className="block text-xs text-slate-500">
+                    <span className="block font-semibold text-slate-900 dark:text-slate-100">{c.name}</span>
+                    <span className="block text-xs text-slate-500 dark:text-slate-400">
                       {formatRange(c.startDate, c.endDate)}
                     </span>
                   </span>
                   {c.ongoing ? (
-                    <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+                    <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/40 dark:text-green-300">
                       Live
                     </span>
                   ) : pendingId === c.id ? (
-                    <span className="text-xs text-slate-400">Checking…</span>
+                    <span className="text-xs text-slate-400 dark:text-slate-500">Checking…</span>
                   ) : null}
                 </button>
               </li>
             ))}
           </ul>
         ) : (
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-slate-500 dark:text-slate-400">
             No upcoming competitions found on your WCA account. Enter a competition ID below.
           </p>
         )}
@@ -120,7 +127,7 @@ export default function Login() {
           <button
             type="button"
             onClick={() => setManual((m) => !m)}
-            className="text-sm font-medium text-indigo-600"
+            className="text-sm font-medium text-indigo-600 dark:text-indigo-400"
           >
             {manual ? "Hide manual entry" : "Enter a competition ID manually"}
           </button>
@@ -133,7 +140,7 @@ export default function Login() {
                 autoCapitalize="off"
                 autoCorrect="off"
                 spellCheck={false}
-                className="min-h-12 flex-1 rounded-xl border border-slate-300 bg-white px-4 text-base"
+                className="min-h-12 flex-1 rounded-xl border border-slate-300 bg-white px-4 text-base dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
               />
               <button
                 type="submit"

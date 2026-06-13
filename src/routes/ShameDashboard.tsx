@@ -21,7 +21,7 @@ export default function ShameDashboard() {
   }, [wcif, checks]);
 
   if (isLoading) {
-    return <p className="p-6 text-center text-sm text-slate-500">Loading…</p>;
+    return <p className="p-6 text-center text-sm text-slate-500 dark:text-slate-400">Loading…</p>;
   }
 
   return <AbsenteeBoard absentees={absentees} byPerson={byPerson} byGroup={byGroup} />;

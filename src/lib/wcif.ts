@@ -131,6 +131,29 @@ export function groupsForRoom(wcif: Wcif, roomId: number): GroupView[] {
     .sort((a, b) => a.activity.startTime.localeCompare(b.activity.startTime));
 }
 
+/**
+ * Index into `groupsForRoom(roomId)` of the group to land a lead on for `now`:
+ * the group currently in progress, else the next upcoming group **today**, else
+ * the last group of today once all have ended, else 0 (no groups today, or the
+ * room has none). "Today" is compared on the same date basis as `GroupView.date`.
+ */
+export function defaultGroupIndex(wcif: Wcif, roomId: number, now: Date = new Date()): number {
+  const groups = groupsForRoom(wcif, roomId);
+  if (groups.length === 0) return 0;
+
+  const today = dateOf(now.toISOString());
+  const nowMs = now.getTime();
+  let lastTodayIndex = -1;
+  for (let i = 0; i < groups.length; i++) {
+    if (groups[i].date !== today) continue;
+    lastTodayIndex = i;
+    // Groups are start-time sorted, so the first whose end is still in the
+    // future is either in progress or the next one to start.
+    if (nowMs < new Date(groups[i].activity.endTime).getTime()) return i;
+  }
+  return lastTodayIndex >= 0 ? lastTodayIndex : 0;
+}
+
 /** Staff assigned to a specific group activity, in WCIF person order. */
 export function staffForGroup(wcif: Wcif, activityId: number): StaffAssignment[] {
   const result: StaffAssignment[] = [];

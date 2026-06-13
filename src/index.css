@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+/* Drive the `dark:` variant off a `.dark` class on <html> (set by the theme
+   module) rather than the OS media query, so a manual override can win over the
+   device theme while still defaulting to "follow system". */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* Mobile-first base. The app is designed to be used one-handed on a phone. */
 html,
 body,
@@ -7,8 +12,21 @@ body,
   height: 100%;
 }
 
+/* Opt into both schemes so native UI (scrollbars, text inputs, focus rings)
+   tracks the device theme alongside our Tailwind `dark:` variants. */
+html {
+  color-scheme: light dark;
+}
+
 body {
   margin: 0;
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior-y: none;
+}
+
+/* Dark page backdrop: covers routes without their own page bg (e.g. the auth
+   callback) and prevents a white flash before route content paints. Driven by
+   the `.dark` class so a manual Light/Dark override is honored too. */
+html.dark body {
+  background-color: #0f172a; /* slate-900 */
 }

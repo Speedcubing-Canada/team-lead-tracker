@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { StageBoard } from "./StageBoard";
 import { checkDocId, type CheckRecord } from "../lib/checks";
@@ -87,5 +87,37 @@ describe("StageBoard", () => {
 
     fireEvent.click(within(row("Bob Brown")).getByLabelText("Add note"));
     expect(within(row("Bob Brown")).getByPlaceholderText(/Add a note/)).toBeInTheDocument();
+  });
+});
+
+describe("StageBoard selection persistence", () => {
+  afterEach(() => localStorage.clear());
+
+  it("restores the selected group across a remount (the Dashboard ↔ Stage reset bug)", () => {
+    const { unmount } = render(
+      <StageBoard wcif={sampleWcif} wcaUserId={1001} competitionId="Comp1" />,
+    );
+    fireEvent.click(screen.getByLabelText("Next group"));
+    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent(
+      "3x3x3 Cube, Round 1 · Group 2",
+    );
+    unmount();
+
+    // Remounting (as React Router does when returning to the Stage tab) restores it.
+    render(<StageBoard wcif={sampleWcif} wcaUserId={1001} competitionId="Comp1" />);
+    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent(
+      "3x3x3 Cube, Round 1 · Group 2",
+    );
+  });
+
+  it("does not persist across a remount without a competitionId", () => {
+    const { unmount } = render(<StageBoard wcif={sampleWcif} wcaUserId={1001} />);
+    fireEvent.click(screen.getByLabelText("Next group"));
+    unmount();
+
+    render(<StageBoard wcif={sampleWcif} wcaUserId={1001} />);
+    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent(
+      "3x3x3 Cube, Round 1 · Group 1",
+    );
   });
 });

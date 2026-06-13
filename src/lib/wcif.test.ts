@@ -3,6 +3,7 @@ import { sampleWcif } from "../test/fixtures/wcif";
 import {
   activityById,
   canAccessCompetition,
+  defaultGroupIndex,
   defaultStageRoomId,
   deriveStageRoomId,
   groupNumberFromCode,
@@ -87,6 +88,41 @@ describe("groupsForRoom", () => {
 
   it("returns an empty list for an unknown room", () => {
     expect(groupsForRoom(sampleWcif, 999)).toEqual([]);
+  });
+});
+
+describe("defaultGroupIndex", () => {
+  // Red Stage (room 1) groups, sorted: [101 (07-01 13:00–13:30Z), 102 (07-01
+  // 13:30–14:00Z), 111 (07-02 09:00–09:30Z)].
+  it("picks the in-progress group", () => {
+    expect(defaultGroupIndex(sampleWcif, 1, new Date("2026-07-01T13:15:00Z"))).toBe(0);
+    expect(defaultGroupIndex(sampleWcif, 1, new Date("2026-07-01T13:45:00Z"))).toBe(1);
+  });
+
+  it("treats a group's start as in-progress and its end as over", () => {
+    // At 13:30 group 101 has just ended; control passes to group 102.
+    expect(defaultGroupIndex(sampleWcif, 1, new Date("2026-07-01T13:30:00Z"))).toBe(1);
+  });
+
+  it("picks the next upcoming group of the day before it starts", () => {
+    expect(defaultGroupIndex(sampleWcif, 1, new Date("2026-07-01T12:00:00Z"))).toBe(0);
+  });
+
+  it("falls back to the last group of today once all of today's groups have ended", () => {
+    expect(defaultGroupIndex(sampleWcif, 1, new Date("2026-07-01T20:00:00Z"))).toBe(1);
+  });
+
+  it("only considers groups scheduled for today", () => {
+    // Day 2: the only group is 111 (index 2), in progress.
+    expect(defaultGroupIndex(sampleWcif, 1, new Date("2026-07-02T09:15:00Z"))).toBe(2);
+  });
+
+  it("returns 0 when no group is scheduled for today", () => {
+    expect(defaultGroupIndex(sampleWcif, 1, new Date("2026-07-05T10:00:00Z"))).toBe(0);
+  });
+
+  it("returns 0 for a room with no groups", () => {
+    expect(defaultGroupIndex(sampleWcif, 999, new Date("2026-07-01T13:15:00Z"))).toBe(0);
   });
 });
 

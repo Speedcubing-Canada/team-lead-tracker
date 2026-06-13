@@ -11,15 +11,20 @@ export interface DutyStyle {
  * codes fall back to slate with the "staff-" prefix stripped.
  */
 const DUTY_STYLES: Record<string, DutyStyle> = {
-  "staff-judge": { label: "Judge", badge: "bg-blue-100 text-blue-700" },
-  "staff-scrambler": { label: "Scrambler", badge: "bg-amber-100 text-amber-700" },
-  "staff-runner": { label: "Runner", badge: "bg-purple-100 text-purple-700" },
-  "staff-dataentry": { label: "Data entry", badge: "bg-teal-100 text-teal-700" },
-  "staff-announcer": { label: "Announcer", badge: "bg-rose-100 text-rose-700" },
+  "staff-judge": { label: "Judge", badge: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300" },
+  "staff-scrambler": { label: "Scrambler", badge: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300" },
+  "staff-runner": { label: "Runner", badge: "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300" },
+  "staff-dataentry": { label: "Data entry", badge: "bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300" },
+  "staff-announcer": { label: "Announcer", badge: "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300" },
 };
 
 export function dutyStyle(code: string): DutyStyle {
-  return DUTY_STYLES[code] ?? { label: code.replace(/^staff-/, ""), badge: "bg-slate-100 text-slate-700" };
+  return (
+    DUTY_STYLES[code] ?? {
+      label: code.replace(/^staff-/, ""),
+      badge: "bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300",
+    }
+  );
 }
 
 /** The order duties are shown in (most to least common on a stage); unknowns sort last. */

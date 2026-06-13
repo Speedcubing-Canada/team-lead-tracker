@@ -31,17 +31,23 @@ export default function StageView() {
   );
 
   if (isLoading) {
-    return <p className="p-6 text-center text-sm text-slate-500">Loading competition…</p>;
+    return <p className="p-6 text-center text-sm text-slate-500 dark:text-slate-400">Loading competition…</p>;
   }
   if (isError || !wcif) {
     return (
-      <p className="p-6 text-center text-sm text-red-600">
+      <p className="p-6 text-center text-sm text-red-600 dark:text-red-400">
         {error instanceof Error ? error.message : "Could not load this competition."}
       </p>
     );
   }
 
   return (
-    <StageBoard wcif={wcif} wcaUserId={user?.wcaUserId} checks={checks} handlers={handlers} />
+    <StageBoard
+      wcif={wcif}
+      wcaUserId={user?.wcaUserId}
+      competitionId={competitionId}
+      checks={checks}
+      handlers={handlers}
+    />
   );
 }

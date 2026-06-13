@@ -36,11 +36,11 @@ export function StaffRow({ name, station, check, onStatus, onNote }: StaffRowPro
   }
 
   return (
-    <li className="rounded-lg bg-slate-50 px-3 py-2">
+    <li className="rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-900">
       <div className="flex items-center gap-2">
         <span className="min-w-0 flex-1">
-          <span className="block break-words text-sm text-slate-900">{name}</span>
-          {station != null && <span className="text-xs text-slate-500">Station {station}</span>}
+          <span className="block break-words text-sm text-slate-900 dark:text-slate-100">{name}</span>
+          {station != null && <span className="text-xs text-slate-500 dark:text-slate-400">Station {station}</span>}
         </span>
         <span className="flex shrink-0 items-center gap-1">
           <IconButton
@@ -62,7 +62,7 @@ export function StaffRow({ name, station, check, onStatus, onNote }: StaffRowPro
           <IconButton
             label="Add note"
             active={showNote || Boolean(note)}
-            activeClass="border-slate-400 bg-white text-slate-700"
+            activeClass="border-slate-400 bg-white text-slate-700 dark:border-slate-500 dark:bg-slate-800 dark:text-slate-300"
             onClick={() => setShowNote((v) => !v)}
           >
             💬
@@ -77,7 +77,7 @@ export function StaffRow({ name, station, check, onStatus, onNote }: StaffRowPro
           onFocus={() => (editing.current = true)}
           onBlur={commitNote}
           placeholder="Add a note (e.g. left early, swapped)…"
-          className="mt-2 min-h-10 w-full rounded-md border border-slate-200 bg-white px-2 text-sm"
+          className="mt-2 min-h-10 w-full rounded-md border border-slate-200 bg-white px-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
         />
       )}
     </li>
@@ -104,7 +104,7 @@ function IconButton({
       aria-pressed={active}
       onClick={onClick}
       className={`flex h-11 w-11 items-center justify-center rounded-lg border text-base font-semibold ${
-        active ? activeClass : "border-slate-300 bg-white text-slate-500"
+        active ? activeClass : "border-slate-300 bg-white text-slate-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-400"
       }`}
     >
       {children}
