@@ -69,6 +69,18 @@ export interface WcifActivity {
 
 const WCA_ORIGIN = import.meta.env?.VITE_WCA_ORIGIN ?? "https://www.worldcubeassociation.org";
 
+/** Build the WCA OAuth authorize URL to redirect the browser to (scope: public). */
+export function buildWcaAuthorizeUrl(state: string): string {
+  const params = new URLSearchParams({
+    client_id: import.meta.env.VITE_WCA_CLIENT_ID,
+    redirect_uri: import.meta.env.VITE_WCA_REDIRECT_URI,
+    response_type: "code",
+    scope: "public",
+    state,
+  });
+  return `${WCA_ORIGIN}/oauth/authorize?${params.toString()}`;
+}
+
 /** Fetch the public WCIF (unauthenticated; assignments and roles are public). */
 export async function fetchPublicWcif(competitionId: string, signal?: AbortSignal): Promise<Wcif> {
   const res = await fetch(

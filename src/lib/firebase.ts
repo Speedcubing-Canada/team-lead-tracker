@@ -1,11 +1,15 @@
 import { initializeApp, type FirebaseApp } from "firebase/app";
-import { getAuth, type Auth } from "firebase/auth";
-import { getFirestore, type Firestore } from "firebase/firestore";
+import { connectAuthEmulator, getAuth, type Auth } from "firebase/auth";
+import { connectFirestoreEmulator, getFirestore, type Firestore } from "firebase/firestore";
+import { connectFunctionsEmulator, getFunctions, type Functions } from "firebase/functions";
 
 /**
  * Firebase is initialized lazily from Vite env vars (see .env.example).
  * Kept lazy so the app can render the login screen even before a project is
  * configured, and so tests don't require live credentials.
+ *
+ * Set VITE_USE_EMULATORS=true to point Auth/Firestore/Functions at the local
+ * Firebase emulator suite.
  */
 const config = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -26,6 +30,11 @@ function getApp(): FirebaseApp {
       );
     }
     app = initializeApp(config);
+    if (import.meta.env.VITE_USE_EMULATORS === "true") {
+      connectAuthEmulator(getAuth(app), "http://127.0.0.1:9099", { disableWarnings: true });
+      connectFirestoreEmulator(getFirestore(app), "127.0.0.1", 8080);
+      connectFunctionsEmulator(getFunctions(app), "127.0.0.1", 5001);
+    }
   }
   return app;
 }
@@ -36,4 +45,8 @@ export function auth(): Auth {
 
 export function db(): Firestore {
   return getFirestore(getApp());
+}
+
+export function functions(): Functions {
+  return getFunctions(getApp());
 }

@@ -1,12 +1,22 @@
-import { NavLink, Outlet, useParams } from "react-router-dom";
+import { Navigate, NavLink, Outlet, useParams } from "react-router-dom";
+import { useAuth } from "../auth/AuthContext";
 
 /**
  * Mobile app shell: a scrollable content area with a fixed bottom tab bar.
  * The bottom bar keeps the primary destinations within thumb reach.
+ * Also guards nested tracker routes behind authentication.
  */
 export function AppShell() {
   const { competitionId } = useParams();
+  const { user, loading } = useAuth();
   const base = `/c/${competitionId}`;
+
+  if (loading) {
+    return <p className="flex h-full items-center justify-center text-sm text-slate-500">Loading…</p>;
+  }
+  if (!user) {
+    return <Navigate to="/" replace />;
+  }
 
   return (
     <div className="flex h-full flex-col bg-slate-50 text-slate-900">
