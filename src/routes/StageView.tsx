@@ -1,16 +1,34 @@
+import { useMemo } from "react";
 import { useParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { useWcif } from "../lib/useWcif";
-import { StageBoard } from "../components/StageBoard";
+import { useChecks } from "../lib/useChecks";
+import { writeNote, writeStatus } from "../lib/checks";
+import { StageBoard, type StageBoardHandlers } from "../components/StageBoard";
 
 /**
- * Stage view (landing): loads the competition's WCIF and shows the lead's stage.
- * Present/absent toggles arrive in Phase 3.
+ * Stage view (landing): loads the competition's WCIF, subscribes to live checks,
+ * and lets the lead mark each staffer present/absent with a note.
  */
 export default function StageView() {
   const { competitionId } = useParams();
   const { user } = useAuth();
   const { data: wcif, isLoading, isError, error } = useWcif(competitionId);
+  const checks = useChecks(competitionId);
+
+  const handlers = useMemo<StageBoardHandlers>(
+    () => ({
+      onStatus: (activityId, registrantId, status) => {
+        if (!competitionId || !user) return;
+        void writeStatus(competitionId, activityId, registrantId, status, user);
+      },
+      onNote: (activityId, registrantId, note) => {
+        if (!competitionId || !user) return;
+        void writeNote(competitionId, activityId, registrantId, note, user);
+      },
+    }),
+    [competitionId, user],
+  );
 
   if (isLoading) {
     return <p className="p-6 text-center text-sm text-slate-500">Loading competition…</p>;
@@ -23,5 +41,7 @@ export default function StageView() {
     );
   }
 
-  return <StageBoard wcif={wcif} wcaUserId={user?.wcaUserId} />;
+  return (
+    <StageBoard wcif={wcif} wcaUserId={user?.wcaUserId} checks={checks} handlers={handlers} />
+  );
 }

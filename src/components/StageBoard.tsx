@@ -7,6 +7,15 @@ import {
   listStages,
   staffForGroup,
 } from "../lib/wcif";
+import { checkDocId, type CheckRecord, type CheckStatus } from "../lib/checks";
+import { StaffRow } from "./StaffRow";
+
+export interface StageBoardHandlers {
+  onStatus: (activityId: number, registrantId: number, status: CheckStatus | null) => void;
+  onNote: (activityId: number, registrantId: number, note: string) => void;
+}
+
+const NOOP_HANDLERS: StageBoardHandlers = { onStatus: () => {}, onNote: () => {} };
 
 const ASSIGNMENT_LABELS: Record<string, string> = {
   "staff-judge": "Judge",
@@ -33,7 +42,17 @@ function dayLabel(date: string): string {
  * staff assigned to each. Present/absent toggles are layered on in Phase 3.
  * Pure with respect to its props (no network) so it's straightforward to test.
  */
-export function StageBoard({ wcif, wcaUserId }: { wcif: Wcif; wcaUserId?: number }) {
+export function StageBoard({
+  wcif,
+  wcaUserId,
+  checks = new Map<string, CheckRecord>(),
+  handlers = NOOP_HANDLERS,
+}: {
+  wcif: Wcif;
+  wcaUserId?: number;
+  checks?: Map<string, CheckRecord>;
+  handlers?: StageBoardHandlers;
+}) {
   const stages = useMemo(() => listStages(wcif), [wcif]);
   const days = useMemo(() => listDays(wcif), [wcif]);
 
@@ -88,19 +107,35 @@ export function StageBoard({ wcif, wcaUserId }: { wcif: Wcif; wcaUserId?: number
                 {staff.length === 0 ? (
                   <p className="mt-1 text-xs text-slate-400">No staff assigned.</p>
                 ) : (
-                  <ul className="mt-2 flex flex-col gap-1">
-                    {staff.map((s) => (
-                      <li
-                        key={`${group.id}-${s.person.registrantId}-${s.assignmentCode}`}
-                        className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2"
-                      >
-                        <span className="text-sm text-slate-900">{s.person.name}</span>
-                        <span className="text-xs font-medium text-slate-500">
-                          {assignmentLabel(s.assignmentCode)}
-                          {s.stationNumber != null ? ` · #${s.stationNumber}` : ""}
-                        </span>
-                      </li>
-                    ))}
+                  <ul className="mt-2 flex flex-col gap-2">
+                    {staff.map((s) => {
+                      const registrantId = s.person.registrantId;
+                      const detail = `${assignmentLabel(s.assignmentCode)}${
+                        s.stationNumber != null ? ` · #${s.stationNumber}` : ""
+                      }`;
+                      // Staffers without a registrantId can't be tracked; show read-only.
+                      if (registrantId == null) {
+                        return (
+                          <li
+                            key={`${group.id}-${s.person.wcaUserId}-${s.assignmentCode}`}
+                            className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2"
+                          >
+                            <span className="text-sm text-slate-900">{s.person.name}</span>
+                            <span className="text-xs font-medium text-slate-500">{detail}</span>
+                          </li>
+                        );
+                      }
+                      return (
+                        <StaffRow
+                          key={`${group.id}-${registrantId}-${s.assignmentCode}`}
+                          name={s.person.name}
+                          detail={detail}
+                          check={checks.get(checkDocId(group.id, registrantId))}
+                          onStatus={(status) => handlers.onStatus(group.id, registrantId, status)}
+                          onNote={(note) => handlers.onNote(group.id, registrantId, note)}
+                        />
+                      );
+                    })}
                   </ul>
                 )}
               </li>
