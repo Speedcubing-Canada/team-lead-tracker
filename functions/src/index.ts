@@ -17,7 +17,13 @@ import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
 import { canAccessCompetition } from "./access.js";
-import { exchangeCodeForToken, fetchPublicWcif, fetchWcaIdentity } from "./wca.js";
+import type { MyCompetition } from "./competitions.js";
+import {
+  exchangeCodeForToken,
+  fetchMyCompetitions,
+  fetchPublicWcif,
+  fetchWcaIdentity,
+} from "./wca.js";
 
 initializeApp();
 
@@ -30,7 +36,7 @@ function uidForWca(wcaUserId: number): string {
 
 export const authWithWca = onCall(
   { secrets: [WCA_CLIENT_SECRET] },
-  async (request): Promise<{ token: string }> => {
+  async (request): Promise<{ token: string; competitions: MyCompetition[] }> => {
     const { code, redirectUri } = (request.data ?? {}) as {
       code?: string;
       redirectUri?: string;
@@ -48,13 +54,16 @@ export const authWithWca = onCall(
       clientId,
       WCA_CLIENT_SECRET.value(),
     );
-    const identity = await fetchWcaIdentity(accessToken);
+    const [identity, competitions] = await Promise.all([
+      fetchWcaIdentity(accessToken),
+      fetchMyCompetitions(accessToken),
+    ]);
 
     const token = await getAuth().createCustomToken(uidForWca(identity.wcaUserId), {
       wcaUserId: identity.wcaUserId,
       name: identity.name,
     });
-    return { token };
+    return { token, competitions };
   },
 );
 

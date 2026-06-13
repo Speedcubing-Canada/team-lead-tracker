@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
 import { onAuthStateChanged, signOut as firebaseSignOut } from "firebase/auth";
 import { auth } from "../lib/firebase";
 import { buildWcaAuthorizeUrl } from "../lib/wca";
+import { clearMyCompetitions } from "../lib/myCompetitions";
 
 export interface AuthUser {
   wcaUserId: number;
@@ -56,6 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = useCallback(() => {
+    clearMyCompetitions();
     void firebaseSignOut(auth());
   }, []);
 

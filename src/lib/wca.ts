@@ -67,6 +67,15 @@ export interface WcifActivity {
   childActivities: WcifActivity[];
 }
 
+/** A competition the signed-in user is involved in (from the WCA /me endpoint). */
+export interface MyCompetition {
+  id: string;
+  name: string;
+  startDate: string;
+  endDate: string;
+  ongoing: boolean;
+}
+
 const WCA_ORIGIN = import.meta.env?.VITE_WCA_ORIGIN ?? "https://www.worldcubeassociation.org";
 
 /** Build the WCA OAuth authorize URL to redirect the browser to (scope: public). */
