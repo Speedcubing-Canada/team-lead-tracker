@@ -129,3 +129,19 @@ export function deriveStageRoomId(wcif: Wcif, wcaUserId: number): number | null 
 export function defaultStageRoomId(wcif: Wcif, wcaUserId: number): number | null {
   return deriveStageRoomId(wcif, wcaUserId) ?? listStages(wcif)[0]?.id ?? null;
 }
+
+/** WCIF roles that, on their own, grant access to a competition's tracker. */
+const PRIVILEGED_ROLES = new Set(["delegate", "trainee-delegate", "organizer"]);
+
+/**
+ * Whether a WCA user may access a competition's tracker: they must hold a
+ * delegate/organizer role, or have at least one staff assignment (a stage lead
+ * who is only listed as staff still belongs). This is the authority the
+ * authWithWca Cloud Function enforces before writing a membership doc.
+ */
+export function canAccessCompetition(wcif: Wcif, wcaUserId: number): boolean {
+  const person = wcif.persons.find((p) => p.wcaUserId === wcaUserId);
+  if (!person) return false;
+  if (person.roles.some((role) => PRIVILEGED_ROLES.has(role))) return true;
+  return person.assignments.some((a) => isStaffCode(a.assignmentCode));
+}

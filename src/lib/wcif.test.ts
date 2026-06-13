@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { sampleWcif } from "../test/fixtures/wcif";
 import {
+  canAccessCompetition,
   defaultStageRoomId,
   deriveStageRoomId,
   groupsForRoomOnDay,
@@ -102,5 +103,42 @@ describe("defaultStageRoomId", () => {
   it("returns null when there are no stages", () => {
     const empty = { ...sampleWcif, schedule: { ...sampleWcif.schedule, venues: [] } };
     expect(defaultStageRoomId(empty, 1001)).toBeNull();
+  });
+});
+
+describe("canAccessCompetition", () => {
+  it("allows a delegate", () => {
+    expect(canAccessCompetition(sampleWcif, 1001)).toBe(true);
+  });
+
+  it("allows an organizer with no assignments", () => {
+    expect(canAccessCompetition(sampleWcif, 1003)).toBe(true);
+  });
+
+  it("allows a staffer with no special role", () => {
+    expect(canAccessCompetition(sampleWcif, 1002)).toBe(true);
+  });
+
+  it("denies a competitor with no role and no staff assignments", () => {
+    const wcif = {
+      ...sampleWcif,
+      persons: [
+        ...sampleWcif.persons,
+        {
+          registrantId: 9,
+          name: "Erin Evans",
+          wcaUserId: 1009,
+          wcaId: "2020EVAN01",
+          countryIso2: "DE",
+          roles: [],
+          assignments: [{ activityId: 101, assignmentCode: "competitor", stationNumber: null }],
+        },
+      ],
+    };
+    expect(canAccessCompetition(wcif, 1009)).toBe(false);
+  });
+
+  it("denies someone not in the competition", () => {
+    expect(canAccessCompetition(sampleWcif, 5555)).toBe(false);
   });
 });
