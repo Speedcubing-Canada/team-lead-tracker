@@ -1,14 +1,27 @@
+import { useParams } from "react-router-dom";
+import { useAuth } from "../auth/AuthContext";
+import { useWcif } from "../lib/useWcif";
+import { StageBoard } from "../components/StageBoard";
+
 /**
- * Stage view (landing). Phase 0 placeholder — renders the per-group staff list
- * with present/absent toggles starting in Phase 2/3.
+ * Stage view (landing): loads the competition's WCIF and shows the lead's stage.
+ * Present/absent toggles arrive in Phase 3.
  */
 export default function StageView() {
-  return (
-    <div className="p-4">
-      <h2 className="text-lg font-semibold">Stage</h2>
-      <p className="mt-2 text-sm text-slate-500">
-        Your stage's groups and staff will appear here.
+  const { competitionId } = useParams();
+  const { user } = useAuth();
+  const { data: wcif, isLoading, isError, error } = useWcif(competitionId);
+
+  if (isLoading) {
+    return <p className="p-6 text-center text-sm text-slate-500">Loading competition…</p>;
+  }
+  if (isError || !wcif) {
+    return (
+      <p className="p-6 text-center text-sm text-red-600">
+        {error instanceof Error ? error.message : "Could not load this competition."}
       </p>
-    </div>
-  );
+    );
+  }
+
+  return <StageBoard wcif={wcif} wcaUserId={user?.wcaUserId} />;
 }
