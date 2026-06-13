@@ -6,11 +6,15 @@ export function AbsenteeBoard({
   absentees,
   byPerson = [],
   byGroup = [],
+  overall = { absent: 0, total: 0 },
 }: {
   absentees: AbsenteeSummary[];
   byPerson?: AbsenceCount[];
   byGroup?: AbsenceCount[];
+  overall?: { absent: number; total: number };
 }) {
+  const overallPct = overall.total > 0 ? Math.round((overall.absent / overall.total) * 100) : 0;
+
   if (absentees.length === 0) {
     return (
       <div className="p-8 text-center">
@@ -24,6 +28,15 @@ export function AbsenteeBoard({
     <div className="flex flex-col gap-4 p-4">
       <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400">
         {absentees.length} {absentees.length === 1 ? "person" : "people"} not doing their assignment
+        {overall.total > 0 && (
+          <span className="font-normal text-slate-400 dark:text-slate-500">
+            {" · "}
+            <span className="font-semibold text-red-600 dark:text-red-400 tabular-nums">
+              {overallPct}%
+            </span>{" "}
+            of assignments so far unfilled
+          </span>
+        )}
       </h2>
       <BarChart title="Most forgotten" data={byPerson} />
       <BarChart title="Absences per group" data={byGroup} />
