@@ -1,0 +1,33 @@
+rules_version = '2';
+
+// Access model: a user may read/write a competition's data only if a membership
+// doc exists for them under that competition. Membership docs are written
+// exclusively by the authWithWca Cloud Function (Admin SDK, which bypasses these
+// rules) after verifying the user holds a delegate/organizer/staff role in the
+// competition's WCIF. Clients can never grant themselves access.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isMember(compId) {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/competitions/$(compId)/members/$(request.auth.uid));
+    }
+
+    match /competitions/{compId} {
+      allow read: if isMember(compId);
+      allow write: if false; // meta is written by the function
+
+      match /members/{uid} {
+        allow read: if isMember(compId);
+        allow write: if false; // membership is written by the function only
+      }
+
+      match /checks/{checkId} {
+        allow read: if isMember(compId);
+        allow create, update: if isMember(compId)
+          && request.resource.data.status in ['present', 'absent']
+          && request.resource.data.updatedByWcaId is int;
+        allow delete: if isMember(compId);
+      }
+    }
+  }
+}

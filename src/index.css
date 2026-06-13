@@ -1,0 +1,14 @@
+@import "tailwindcss";
+
+/* Mobile-first base. The app is designed to be used one-handed on a phone. */
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
