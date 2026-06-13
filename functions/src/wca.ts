@@ -1,7 +1,12 @@
 /** Server-side WCA OAuth + API calls used by the auth functions. */
 
 import type { AccessWcif } from "./access.js";
-import { mergeMyCompetitions, type MyCompetition, type RawCompetition } from "./competitions.js";
+import {
+  mergeMyCompetitions,
+  partitionByOngoing,
+  type MyCompetition,
+  type RawCompetition,
+} from "./competitions.js";
 
 const WCA_ORIGIN = process.env.WCA_ORIGIN ?? "https://www.worldcubeassociation.org";
 
@@ -48,22 +53,22 @@ export async function fetchWcaIdentity(accessToken: string): Promise<WcaIdentity
 }
 
 /**
- * Competitions the user is involved in (registered, organizing, delegating, or
- * staffing), via the same /me endpoint. Best-effort: returns [] on failure so a
- * transient error here never blocks login (manual entry remains available).
+ * Competitions the user is involved in — organizing, delegating, OR registered
+ * for — via /competitions/mine (whose `future_competitions` covers not-yet-over
+ * comps and, unlike /me, includes delegated/organized ones). Works with the
+ * `public` scope. Best-effort: returns [] on failure so a transient error never
+ * blocks login (manual entry remains available).
  */
 export async function fetchMyCompetitions(accessToken: string): Promise<MyCompetition[]> {
   try {
-    const res = await fetch(
-      `${WCA_ORIGIN}/api/v0/me?upcoming_competitions=true&ongoing_competitions=true`,
-      { headers: { Authorization: `Bearer ${accessToken}` } },
-    );
+    const res = await fetch(`${WCA_ORIGIN}/api/v0/competitions/mine`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
     if (!res.ok) return [];
-    const data = (await res.json()) as {
-      ongoing_competitions?: RawCompetition[];
-      upcoming_competitions?: RawCompetition[];
-    };
-    return mergeMyCompetitions(data.ongoing_competitions ?? [], data.upcoming_competitions ?? []);
+    const data = (await res.json()) as { future_competitions?: RawCompetition[] };
+    const today = new Date().toISOString().slice(0, 10);
+    const { ongoing, upcoming } = partitionByOngoing(data.future_competitions ?? [], today);
+    return mergeMyCompetitions(ongoing, upcoming);
   } catch {
     return [];
   }

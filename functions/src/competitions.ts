@@ -16,6 +16,23 @@ export interface MyCompetition {
   ongoing: boolean;
 }
 
+/**
+ * Split a list of not-yet-over competitions into those happening now (today
+ * within [start_date, end_date], inclusive) and those still upcoming.
+ */
+export function partitionByOngoing(
+  future: RawCompetition[],
+  today: string,
+): { ongoing: RawCompetition[]; upcoming: RawCompetition[] } {
+  const ongoing: RawCompetition[] = [];
+  const upcoming: RawCompetition[] = [];
+  for (const c of future) {
+    if (c.start_date <= today && today <= c.end_date) ongoing.push(c);
+    else upcoming.push(c);
+  }
+  return { ongoing, upcoming };
+}
+
 function normalize(c: RawCompetition, ongoing: boolean): MyCompetition {
   return { id: c.id, name: c.name, startDate: c.start_date, endDate: c.end_date, ongoing };
 }
