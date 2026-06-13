@@ -23,6 +23,18 @@ export function checkDocId(activityId: number, registrantId: number): string {
   return `${activityId}_${registrantId}`;
 }
 
+/** Inverse of checkDocId; returns null if the id isn't a valid "activityId_registrantId". */
+export function parseCheckDocId(id: string): { activityId: number; registrantId: number } | null {
+  const [activityId, registrantId, ...rest] = id.split("_");
+  if (rest.length > 0) return null;
+  const a = Number(activityId);
+  const r = Number(registrantId);
+  if (!Number.isFinite(a) || !Number.isFinite(r) || activityId === "" || registrantId === "") {
+    return null;
+  }
+  return { activityId: a, registrantId: r };
+}
+
 /** Tapping the active status clears it; tapping the other switches. */
 export function toggleStatus(current: CheckStatus | null, clicked: CheckStatus): CheckStatus | null {
   return current === clicked ? null : clicked;

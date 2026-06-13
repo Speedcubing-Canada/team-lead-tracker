@@ -57,6 +57,25 @@ export function listDays(wcif: Wcif): string[] {
   return [...dates].sort();
 }
 
+/** Find an activity anywhere in the schedule by id (searches descendants), else null. */
+export function activityById(wcif: Wcif, activityId: number): WcifActivity | null {
+  function search(activity: WcifActivity): WcifActivity | null {
+    if (activity.id === activityId) return activity;
+    for (const child of activity.childActivities) {
+      const found = search(child);
+      if (found) return found;
+    }
+    return null;
+  }
+  for (const room of eachRoom(wcif)) {
+    for (const activity of room.activities) {
+      const found = search(activity);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
 /** The room containing the given activity (or any of its descendants), else null. */
 export function roomIdForActivity(wcif: Wcif, activityId: number): number | null {
   for (const room of eachRoom(wcif)) {

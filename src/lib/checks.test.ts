@@ -1,9 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { checkDocId, toggleStatus } from "./checks";
+import { checkDocId, parseCheckDocId, toggleStatus } from "./checks";
 
 describe("checkDocId", () => {
   it("keys a check by group activity and registrant", () => {
     expect(checkDocId(101, 5)).toBe("101_5");
+  });
+
+  it("round-trips through parseCheckDocId", () => {
+    expect(parseCheckDocId(checkDocId(101, 5))).toEqual({ activityId: 101, registrantId: 5 });
+  });
+
+  it("returns null for a malformed id", () => {
+    expect(parseCheckDocId("nope")).toBeNull();
   });
 });
 

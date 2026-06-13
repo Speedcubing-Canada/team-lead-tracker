@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { sampleWcif } from "../test/fixtures/wcif";
 import {
+  activityById,
   canAccessCompetition,
   defaultStageRoomId,
   deriveStageRoomId,
@@ -35,6 +36,16 @@ describe("roomIdForActivity", () => {
 
   it("returns null for an unknown activity", () => {
     expect(roomIdForActivity(sampleWcif, 999)).toBeNull();
+  });
+});
+
+describe("activityById", () => {
+  it("finds a nested group activity by id", () => {
+    expect(activityById(sampleWcif, 101)?.name).toBe("3x3x3 Cube, Round 1, Group 1");
+  });
+
+  it("returns null for an unknown id", () => {
+    expect(activityById(sampleWcif, 999)).toBeNull();
   });
 });
 
