@@ -1,7 +1,16 @@
-import type { AbsenteeSummary } from "../lib/absentees";
+import type { AbsenceCount, AbsenteeSummary } from "../lib/absentees";
+import { BarChart } from "./BarChart";
 
-/** Presentational shame board: everyone currently marked absent, grouped by person. */
-export function AbsenteeBoard({ absentees }: { absentees: AbsenteeSummary[] }) {
+/** Presentational shame board: charts of who/where, then the per-person breakdown. */
+export function AbsenteeBoard({
+  absentees,
+  byPerson = [],
+  byGroup = [],
+}: {
+  absentees: AbsenteeSummary[];
+  byPerson?: AbsenceCount[];
+  byGroup?: AbsenceCount[];
+}) {
   if (absentees.length === 0) {
     return (
       <div className="p-8 text-center">
@@ -12,10 +21,12 @@ export function AbsenteeBoard({ absentees }: { absentees: AbsenteeSummary[] }) {
   }
 
   return (
-    <div className="p-4">
-      <h2 className="mb-3 text-sm font-semibold text-slate-500">
+    <div className="flex flex-col gap-4 p-4">
+      <h2 className="text-sm font-semibold text-slate-500">
         {absentees.length} {absentees.length === 1 ? "person" : "people"} not doing their assignment
       </h2>
+      <BarChart title="Most forgotten" data={byPerson} />
+      <BarChart title="Absences per group" data={byGroup} />
       <ul className="flex flex-col gap-3">
         {absentees.map(({ person, missed }) => (
           <li key={person.registrantId} className="rounded-xl border border-slate-200 bg-white p-3">

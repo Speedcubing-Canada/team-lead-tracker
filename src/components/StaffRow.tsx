@@ -3,14 +3,18 @@ import { toggleStatus, type CheckRecord, type CheckStatus } from "../lib/checks"
 
 interface StaffRowProps {
   name: string;
-  detail: string;
+  station: number | null;
   check?: CheckRecord;
   onStatus: (status: CheckStatus | null) => void;
   onNote: (note: string) => void;
 }
 
-/** A single staffer: name + assignment, a present/absent toggle, and an optional note. */
-export function StaffRow({ name, detail, check, onStatus, onNote }: StaffRowProps) {
+/**
+ * A single staffer. The name gets the whole left column (names can be long) and
+ * the controls are compact icon buttons on the right: present (✓), absent (✕),
+ * and a note toggle (💬) that stays out of the way until tapped.
+ */
+export function StaffRow({ name, station, check, onStatus, onNote }: StaffRowProps) {
   const status = check?.status ?? null;
 
   // Local note state, kept in sync with remote unless this lead is editing.
@@ -20,6 +24,12 @@ export function StaffRow({ name, detail, check, onStatus, onNote }: StaffRowProp
     if (!editing.current) setNote(check?.note ?? "");
   }, [check?.note]);
 
+  // Notes are opt-in: hidden until tapped, but always shown if a note exists.
+  const [showNote, setShowNote] = useState(Boolean(check?.note));
+  useEffect(() => {
+    if (check?.note) setShowNote(true);
+  }, [check?.note]);
+
   function commitNote() {
     editing.current = false;
     if (note !== (check?.note ?? "")) onNote(note);
@@ -27,28 +37,40 @@ export function StaffRow({ name, detail, check, onStatus, onNote }: StaffRowProp
 
   return (
     <li className="rounded-lg bg-slate-50 px-3 py-2">
-      <div className="flex items-center justify-between gap-2">
-        <span className="min-w-0">
-          <span className="block truncate text-sm text-slate-900">{name}</span>
-          <span className="block text-xs text-slate-500">{detail}</span>
+      <div className="flex items-center gap-2">
+        <span className="min-w-0 flex-1">
+          <span className="block break-words text-sm text-slate-900">{name}</span>
+          {station != null && <span className="text-xs text-slate-500">Station {station}</span>}
         </span>
-        <span className="flex shrink-0 overflow-hidden rounded-lg border border-slate-300">
-          <StatusButton
+        <span className="flex shrink-0 items-center gap-1">
+          <IconButton
             label="Present"
             active={status === "present"}
-            activeClass="bg-green-600 text-white"
+            activeClass="border-green-600 bg-green-600 text-white"
             onClick={() => onStatus(toggleStatus(status, "present"))}
-          />
-          <StatusButton
+          >
+            ✓
+          </IconButton>
+          <IconButton
             label="Absent"
             active={status === "absent"}
-            activeClass="bg-red-600 text-white"
+            activeClass="border-red-600 bg-red-600 text-white"
             onClick={() => onStatus(toggleStatus(status, "absent"))}
-          />
+          >
+            ✕
+          </IconButton>
+          <IconButton
+            label="Add note"
+            active={showNote || Boolean(note)}
+            activeClass="border-slate-400 bg-white text-slate-700"
+            onClick={() => setShowNote((v) => !v)}
+          >
+            💬
+          </IconButton>
         </span>
       </div>
 
-      {(status !== null || note) && (
+      {showNote && (
         <input
           value={note}
           onChange={(e) => setNote(e.target.value)}
@@ -62,16 +84,18 @@ export function StaffRow({ name, detail, check, onStatus, onNote }: StaffRowProp
   );
 }
 
-function StatusButton({
+function IconButton({
   label,
   active,
   activeClass,
   onClick,
+  children,
 }: {
   label: string;
   active: boolean;
   activeClass: string;
   onClick: () => void;
+  children: React.ReactNode;
 }) {
   return (
     <button
@@ -79,11 +103,11 @@ function StatusButton({
       aria-label={label}
       aria-pressed={active}
       onClick={onClick}
-      className={`min-h-11 min-w-16 px-3 text-sm font-medium ${
-        active ? activeClass : "bg-white text-slate-600"
+      className={`flex h-11 w-11 items-center justify-center rounded-lg border text-base font-semibold ${
+        active ? activeClass : "border-slate-300 bg-white text-slate-500"
       }`}
     >
-      {label}
+      {children}
     </button>
   );
 }

@@ -4,21 +4,28 @@ import { StageBoard } from "./StageBoard";
 import { checkDocId, type CheckRecord } from "../lib/checks";
 import { sampleWcif } from "../test/fixtures/wcif";
 
-function rowWithin(container: HTMLElement, name: string): HTMLElement {
-  return within(container).getByText(name).closest("li")!;
+function row(name: string): HTMLElement {
+  return screen.getByText(name).closest("li")!;
 }
 
 describe("StageBoard", () => {
-  it("defaults to the lead's derived stage and lists its groups + staff", () => {
+  it("defaults to the lead's derived stage and groups staff by duty in order", () => {
     // Alice (1001) staff-judges on the Red Stage.
     render(<StageBoard wcif={sampleWcif} wcaUserId={1001} />);
 
     expect(screen.getByLabelText("Stage")).toHaveValue("1");
+    // Clean derived label, not the raw WCIF name.
+    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent(
+      "3x3x3 Cube, Round 1 · Group 1",
+    );
 
-    const g1 = screen.getByText("3x3x3 Cube, Round 1, Group 1").closest("li")!;
-    expect(within(g1).getByText("Alice Anderson")).toBeInTheDocument();
-    expect(within(g1).getByText(/Judge/)).toBeInTheDocument();
-    expect(within(g1).getByText("Bob Brown")).toBeInTheDocument();
+    // Staff are grouped under duty headers, judges before scramblers.
+    expect(screen.getAllByTestId("duty-header").map((h) => h.textContent)).toEqual([
+      "Judge · 1",
+      "Scrambler · 1",
+    ]);
+    expect(screen.getByText("Alice Anderson")).toBeInTheDocument();
+    expect(screen.getByText("Bob Brown")).toBeInTheDocument();
   });
 
   it("falls back to the first stage when there is no user", () => {
@@ -26,10 +33,32 @@ describe("StageBoard", () => {
     expect(screen.getByLabelText("Stage")).toHaveValue("1");
   });
 
+  it("navigates to the next group with the ▶ button", () => {
+    render(<StageBoard wcif={sampleWcif} wcaUserId={1001} />);
+
+    expect(screen.getByLabelText("Previous group")).toBeDisabled();
+    fireEvent.click(screen.getByLabelText("Next group"));
+
+    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent(
+      "3x3x3 Cube, Round 1 · Group 2",
+    );
+    // Group 2 (activity 102) has Bob as a runner.
+    expect(screen.getByTestId("duty-header")).toHaveTextContent("Runner · 1");
+    expect(screen.getByText("Bob Brown")).toBeInTheDocument();
+  });
+
+  it("jumps to a group via the picker", () => {
+    render(<StageBoard wcif={sampleWcif} wcaUserId={1001} />);
+    // Red stage groups, in order: index 0=333 g1, 1=333 g2, 2=222 g1 (next day).
+    fireEvent.change(screen.getByLabelText("Group"), { target: { value: "2" } });
+    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent(
+      "2x2x2 Cube, Round 1 · Group 1",
+    );
+  });
+
   it("reflects an existing check and toggles status through the handler", () => {
     const onStatus = vi.fn();
     const checks = new Map<string, CheckRecord>([
-      // Alice (registrantId 1) marked present in group 101.
       [checkDocId(101, 1), { status: "present", note: "", updatedByName: "L", updatedByWcaId: 9 }],
     ]);
     render(
@@ -41,18 +70,22 @@ describe("StageBoard", () => {
       />,
     );
 
-    const g1 = screen.getByText("3x3x3 Cube, Round 1, Group 1").closest("li")!;
-
-    // Alice's Present button is active.
-    const alice = rowWithin(g1, "Alice Anderson");
+    const alice = row("Alice Anderson");
     expect(within(alice).getByLabelText("Present")).toHaveAttribute("aria-pressed", "true");
 
-    // Tapping Bob's Absent (in group 1) sets absent for him.
-    fireEvent.click(within(rowWithin(g1, "Bob Brown")).getByLabelText("Absent"));
+    fireEvent.click(within(row("Bob Brown")).getByLabelText("Absent"));
     expect(onStatus).toHaveBeenCalledWith(101, 2, "absent");
 
-    // Tapping Alice's already-active Present clears it (null).
     fireEvent.click(within(alice).getByLabelText("Present"));
     expect(onStatus).toHaveBeenCalledWith(101, 1, null);
+  });
+
+  it("hides the note input until the note button is tapped", () => {
+    render(<StageBoard wcif={sampleWcif} wcaUserId={1001} />);
+
+    expect(screen.queryByPlaceholderText(/Add a note/)).not.toBeInTheDocument();
+
+    fireEvent.click(within(row("Bob Brown")).getByLabelText("Add note"));
+    expect(within(row("Bob Brown")).getByPlaceholderText(/Add a note/)).toBeInTheDocument();
   });
 });

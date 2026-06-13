@@ -1,4 +1,5 @@
 import type { Wcif, WcifActivity, WcifPerson, WcifRoom } from "./wca";
+import { dutyRank } from "./duties";
 
 export interface Stage {
   id: number;
@@ -86,14 +87,48 @@ export function roomIdForActivity(wcif: Wcif, activityId: number): number | null
   return null;
 }
 
-/** Group activities (childActivities) in a room on a given day, sorted by start time. */
-export function groupsForRoomOnDay(wcif: Wcif, roomId: number, date: string): WcifActivity[] {
+/** A group activity enriched with a clean, display-ready label. */
+export interface GroupView {
+  activity: WcifActivity;
+  /** Parent round name, e.g. "3x3x3 Cube, Round 1". */
+  roundName: string;
+  /** Group number parsed from the activity code, or null when absent. */
+  groupNumber: number | null;
+  /** `${roundName} · Group ${n}`, falling back to the raw name when unparseable. */
+  label: string;
+  /** Scheduled date (YYYY-MM-DD), for grouping in a picker. */
+  date: string;
+}
+
+/** Parse the group number out of an activity code like "333-r1-g1" → 1, else null. */
+export function groupNumberFromCode(activityCode: string): number | null {
+  const match = activityCode.match(/-g(\d+)\b/);
+  return match ? Number(match[1]) : null;
+}
+
+/**
+ * All of a room's groups across every day, sorted by start time, each carrying a
+ * clean "round · Group N" label derived from the parent round name plus the group
+ * number in the activity code. This avoids trusting the raw WCIF group `name`,
+ * which on some comps leaks the zone/room name (e.g. "…Round 1 Zona 1").
+ */
+export function groupsForRoom(wcif: Wcif, roomId: number): GroupView[] {
   const room = eachRoom(wcif).find((r) => r.id === roomId);
   if (!room) return [];
   return room.activities
-    .flatMap((activity) => activity.childActivities)
-    .filter((group) => dateOf(group.startTime) === date)
-    .sort((a, b) => a.startTime.localeCompare(b.startTime));
+    .flatMap((round) =>
+      round.childActivities.map((group): GroupView => {
+        const groupNumber = groupNumberFromCode(group.activityCode);
+        return {
+          activity: group,
+          roundName: round.name,
+          groupNumber,
+          label: groupNumber != null ? `${round.name} · Group ${groupNumber}` : group.name,
+          date: dateOf(group.startTime),
+        };
+      }),
+    )
+    .sort((a, b) => a.activity.startTime.localeCompare(b.activity.startTime));
 }
 
 /** Staff assigned to a specific group activity, in WCIF person order. */
@@ -111,6 +146,37 @@ export function staffForGroup(wcif: Wcif, activityId: number): StaffAssignment[]
     }
   }
   return result;
+}
+
+/** A group's staff sharing one duty (e.g. all judges), people sorted by name. */
+export interface DutyGroup {
+  assignmentCode: string;
+  staff: StaffAssignment[];
+}
+
+/**
+ * Staff for a group, grouped by duty (judges together, scramblers together, …)
+ * in duty order, with people sorted by name within each. Lets a delegate scan
+ * one duty at a time instead of a mixed list.
+ */
+export function staffByDuty(wcif: Wcif, activityId: number): DutyGroup[] {
+  const byCode = new Map<string, StaffAssignment[]>();
+  for (const assignment of staffForGroup(wcif, activityId)) {
+    const list = byCode.get(assignment.assignmentCode);
+    if (list) list.push(assignment);
+    else byCode.set(assignment.assignmentCode, [assignment]);
+  }
+
+  return [...byCode.entries()]
+    .map(([assignmentCode, staff]) => ({
+      assignmentCode,
+      staff: staff.sort((a, b) => a.person.name.localeCompare(b.person.name)),
+    }))
+    .sort(
+      (a, b) =>
+        dutyRank(a.assignmentCode) - dutyRank(b.assignmentCode) ||
+        a.assignmentCode.localeCompare(b.assignmentCode),
+    );
 }
 
 /**

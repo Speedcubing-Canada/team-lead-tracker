@@ -2,11 +2,12 @@ import { useMemo, useState } from "react";
 import type { Wcif } from "../lib/wca";
 import {
   defaultStageRoomId,
-  groupsForRoomOnDay,
-  listDays,
+  groupsForRoom,
   listStages,
-  staffForGroup,
+  staffByDuty,
+  type GroupView,
 } from "../lib/wcif";
+import { dutyStyle } from "../lib/duties";
 import { checkDocId, type CheckRecord, type CheckStatus } from "../lib/checks";
 import { StaffRow } from "./StaffRow";
 
@@ -17,18 +18,6 @@ export interface StageBoardHandlers {
 
 const NOOP_HANDLERS: StageBoardHandlers = { onStatus: () => {}, onNote: () => {} };
 
-const ASSIGNMENT_LABELS: Record<string, string> = {
-  "staff-judge": "Judge",
-  "staff-scrambler": "Scrambler",
-  "staff-runner": "Runner",
-  "staff-dataentry": "Data entry",
-  "staff-announcer": "Announcer",
-};
-
-function assignmentLabel(code: string): string {
-  return ASSIGNMENT_LABELS[code] ?? code.replace(/^staff-/, "");
-}
-
 function dayLabel(date: string): string {
   return new Date(`${date}T00:00:00`).toLocaleDateString(undefined, {
     weekday: "short",
@@ -37,10 +26,31 @@ function dayLabel(date: string): string {
   });
 }
 
+function timeLabel(isoDateTime: string): string {
+  return new Date(isoDateTime).toLocaleTimeString(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+/** Group the stage's groups by day so the picker can show day headers. */
+function byDay(groups: GroupView[]): { date: string; items: { index: number; label: string }[] }[] {
+  const out: { date: string; items: { index: number; label: string }[] }[] = [];
+  groups.forEach((g, index) => {
+    let bucket = out[out.length - 1];
+    if (!bucket || bucket.date !== g.date) {
+      bucket = { date: g.date, items: [] };
+      out.push(bucket);
+    }
+    bucket.items.push({ index, label: g.label });
+  });
+  return out;
+}
+
 /**
- * Read-only board for a single stage + day: the groups on that stage and the
- * staff assigned to each. Present/absent toggles are layered on in Phase 3.
- * Pure with respect to its props (no network) so it's straightforward to test.
+ * Board for a single stage, navigated one group at a time (Competition-Groups
+ * style): a stage selector plus prev/next and a jump-to picker, then the staff
+ * assigned to the current group with present/absent toggles. Pure w.r.t. props.
  */
 export function StageBoard({
   wcif,
@@ -54,26 +64,34 @@ export function StageBoard({
   handlers?: StageBoardHandlers;
 }) {
   const stages = useMemo(() => listStages(wcif), [wcif]);
-  const days = useMemo(() => listDays(wcif), [wcif]);
 
   const [roomId, setRoomId] = useState<number | null>(
     () => (wcaUserId != null ? defaultStageRoomId(wcif, wcaUserId) : stages[0]?.id) ?? null,
   );
-  const [day, setDay] = useState<string | undefined>(() => days[0]);
+  const [groupIndex, setGroupIndex] = useState(0);
 
   const groups = useMemo(
-    () => (roomId != null && day ? groupsForRoomOnDay(wcif, roomId, day) : []),
-    [wcif, roomId, day],
+    () => (roomId != null ? groupsForRoom(wcif, roomId) : []),
+    [wcif, roomId],
   );
+  const dayBuckets = useMemo(() => byDay(groups), [groups]);
+
+  const index = Math.min(groupIndex, Math.max(groups.length - 1, 0));
+  const current = groups[index];
+
+  function changeStage(id: number) {
+    setRoomId(id);
+    setGroupIndex(0);
+  }
 
   return (
     <div className="flex flex-col">
-      <header className="sticky top-0 z-10 flex gap-2 border-b border-slate-200 bg-white p-3">
+      <header className="sticky top-0 z-10 flex flex-col gap-2 border-b border-slate-200 bg-white p-3">
         <select
           aria-label="Stage"
-          className="min-h-11 flex-1 rounded-lg border border-slate-300 bg-white px-3 text-base"
+          className="min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-base"
           value={roomId ?? ""}
-          onChange={(e) => setRoomId(Number(e.target.value))}
+          onChange={(e) => changeStage(Number(e.target.value))}
         >
           {stages.map((s) => (
             <option key={s.id} value={s.id}>
@@ -81,68 +99,124 @@ export function StageBoard({
             </option>
           ))}
         </select>
-        <select
-          aria-label="Day"
-          className="min-h-11 rounded-lg border border-slate-300 bg-white px-3 text-base"
-          value={day ?? ""}
-          onChange={(e) => setDay(e.target.value)}
-        >
-          {days.map((d) => (
-            <option key={d} value={d}>
-              {dayLabel(d)}
-            </option>
-          ))}
-        </select>
+
+        {current && (
+          <>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                aria-label="Previous group"
+                disabled={index === 0}
+                onClick={() => setGroupIndex(index - 1)}
+                className="flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-slate-300 bg-white text-lg disabled:opacity-40"
+              >
+                ◀
+              </button>
+              <select
+                aria-label="Group"
+                className="min-h-11 min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 text-base"
+                value={index}
+                onChange={(e) => setGroupIndex(Number(e.target.value))}
+              >
+                {dayBuckets.map((bucket) => (
+                  <optgroup key={bucket.date} label={dayLabel(bucket.date)}>
+                    {bucket.items.map((item) => (
+                      <option key={item.index} value={item.index}>
+                        {item.label}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+              <button
+                type="button"
+                aria-label="Next group"
+                disabled={index >= groups.length - 1}
+                onClick={() => setGroupIndex(index + 1)}
+                className="flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-slate-300 bg-white text-lg disabled:opacity-40"
+              >
+                ▶
+              </button>
+            </div>
+            <p className="text-center text-xs text-slate-500">
+              {dayLabel(current.date)} · {timeLabel(current.activity.startTime)} · Group{" "}
+              {index + 1} of {groups.length}
+            </p>
+          </>
+        )}
       </header>
 
-      {groups.length === 0 ? (
-        <p className="p-6 text-center text-sm text-slate-500">No groups on this stage for this day.</p>
+      {!current ? (
+        <p className="p-6 text-center text-sm text-slate-500">No groups on this stage.</p>
       ) : (
-        <ul className="divide-y divide-slate-100">
-          {groups.map((group) => {
-            const staff = staffForGroup(wcif, group.id);
-            return (
-              <li key={group.id} className="p-3">
-                <h3 className="text-sm font-semibold text-slate-900">{group.name}</h3>
-                {staff.length === 0 ? (
-                  <p className="mt-1 text-xs text-slate-400">No staff assigned.</p>
-                ) : (
-                  <ul className="mt-2 flex flex-col gap-2">
-                    {staff.map((s) => {
-                      const registrantId = s.person.registrantId;
-                      const detail = `${assignmentLabel(s.assignmentCode)}${
-                        s.stationNumber != null ? ` · #${s.stationNumber}` : ""
-                      }`;
-                      // Staffers without a registrantId can't be tracked; show read-only.
-                      if (registrantId == null) {
-                        return (
-                          <li
-                            key={`${group.id}-${s.person.wcaUserId}-${s.assignmentCode}`}
-                            className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2"
-                          >
-                            <span className="text-sm text-slate-900">{s.person.name}</span>
-                            <span className="text-xs font-medium text-slate-500">{detail}</span>
-                          </li>
-                        );
-                      }
-                      return (
-                        <StaffRow
-                          key={`${group.id}-${registrantId}-${s.assignmentCode}`}
-                          name={s.person.name}
-                          detail={detail}
-                          check={checks.get(checkDocId(group.id, registrantId))}
-                          onStatus={(status) => handlers.onStatus(group.id, registrantId, status)}
-                          onNote={(note) => handlers.onNote(group.id, registrantId, note)}
-                        />
-                      );
-                    })}
-                  </ul>
-                )}
-              </li>
-            );
-          })}
-        </ul>
+        <div className="p-3">
+          <h2 className="mb-2 text-base font-semibold text-slate-900">{current.label}</h2>
+          <StaffList wcif={wcif} groupId={current.activity.id} checks={checks} handlers={handlers} />
+        </div>
       )}
+    </div>
+  );
+}
+
+function StaffList({
+  wcif,
+  groupId,
+  checks,
+  handlers,
+}: {
+  wcif: Wcif;
+  groupId: number;
+  checks: Map<string, CheckRecord>;
+  handlers: StageBoardHandlers;
+}) {
+  const dutyGroups = staffByDuty(wcif, groupId);
+  if (dutyGroups.length === 0) {
+    return <p className="text-xs text-slate-400">No staff assigned.</p>;
+  }
+  return (
+    <div className="flex flex-col gap-4">
+      {dutyGroups.map(({ assignmentCode, staff }) => {
+        const duty = dutyStyle(assignmentCode);
+        return (
+          <section key={assignmentCode}>
+            <h3
+              data-testid="duty-header"
+              className={`mb-1.5 inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${duty.badge}`}
+            >
+              {duty.label} · {staff.length}
+            </h3>
+            <ul className="flex flex-col gap-2">
+              {staff.map((s) => {
+                const registrantId = s.person.registrantId;
+                // Staffers without a registrantId can't be tracked; show read-only.
+                if (registrantId == null) {
+                  return (
+                    <li
+                      key={`${s.person.wcaUserId}-${assignmentCode}`}
+                      className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-900"
+                    >
+                      {s.person.name}
+                      {s.stationNumber != null && (
+                        <span className="ml-2 text-xs text-slate-500">Station {s.stationNumber}</span>
+                      )}
+                    </li>
+                  );
+                }
+                return (
+                  <StaffRow
+                    key={`${registrantId}-${assignmentCode}`}
+                    name={s.person.name}
+                    station={s.stationNumber}
+                    check={checks.get(checkDocId(groupId, registrantId))}
+                    onStatus={(status) => handlers.onStatus(groupId, registrantId, status)}
+                    onNote={(note) => handlers.onNote(groupId, registrantId, note)}
+                  />
+                );
+              })}
+            </ul>
+          </section>
+        );
+      })}
     </div>
   );
 }

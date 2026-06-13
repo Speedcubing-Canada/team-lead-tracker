@@ -5,10 +5,12 @@ import {
   canAccessCompetition,
   defaultStageRoomId,
   deriveStageRoomId,
-  groupsForRoomOnDay,
+  groupNumberFromCode,
+  groupsForRoom,
   listDays,
   listStages,
   roomIdForActivity,
+  staffByDuty,
   staffForGroup,
 } from "./wcif";
 
@@ -49,20 +51,42 @@ describe("activityById", () => {
   });
 });
 
-describe("groupsForRoomOnDay", () => {
-  it("returns the room's groups on that day, sorted by start time", () => {
-    const groups = groupsForRoomOnDay(sampleWcif, 1, "2026-07-01");
-    expect(groups.map((g) => g.id)).toEqual([101, 102]);
+describe("groupNumberFromCode", () => {
+  it("parses the group number from a group activity code", () => {
+    expect(groupNumberFromCode("333-r1-g1")).toBe(1);
+    expect(groupNumberFromCode("777-r1-g12")).toBe(12);
   });
 
-  it("excludes groups from other days", () => {
-    const groups = groupsForRoomOnDay(sampleWcif, 1, "2026-07-02");
-    expect(groups.map((g) => g.id)).toEqual([111]);
+  it("returns null for codes without a group segment", () => {
+    expect(groupNumberFromCode("333-r1")).toBeNull();
+    expect(groupNumberFromCode("nonsense")).toBeNull();
+  });
+});
+
+describe("groupsForRoom", () => {
+  it("returns all of a room's groups across days, sorted by start time", () => {
+    const groups = groupsForRoom(sampleWcif, 1);
+    expect(groups.map((g) => g.activity.id)).toEqual([101, 102, 111]);
+  });
+
+  it("derives a clean 'round · Group N' label from the parent round + activity code", () => {
+    const groups = groupsForRoom(sampleWcif, 1);
+    expect(groups[0]).toMatchObject({
+      roundName: "3x3x3 Cube, Round 1",
+      groupNumber: 1,
+      label: "3x3x3 Cube, Round 1 · Group 1",
+      date: "2026-07-01",
+    });
+    expect(groups[2].label).toBe("2x2x2 Cube, Round 1 · Group 1");
   });
 
   it("excludes groups from other rooms", () => {
-    const groups = groupsForRoomOnDay(sampleWcif, 2, "2026-07-01");
-    expect(groups.map((g) => g.id)).toEqual([201]);
+    const groups = groupsForRoom(sampleWcif, 2);
+    expect(groups.map((g) => g.activity.id)).toEqual([201]);
+  });
+
+  it("returns an empty list for an unknown room", () => {
+    expect(groupsForRoom(sampleWcif, 999)).toEqual([]);
   });
 });
 
@@ -79,6 +103,37 @@ describe("staffForGroup", () => {
     const staff = staffForGroup(sampleWcif, 201);
     expect(staff.map((s) => s.person.wcaUserId)).toEqual([1004]);
     expect(staff[0].assignmentCode).toBe("staff-judge");
+  });
+});
+
+describe("staffByDuty", () => {
+  it("groups a group's staff by duty in duty order, people sorted by name", () => {
+    const groups = staffByDuty(sampleWcif, 101);
+    expect(groups.map((g) => g.assignmentCode)).toEqual(["staff-judge", "staff-scrambler"]);
+    expect(groups[0].staff.map((s) => s.person.name)).toEqual(["Alice Anderson"]);
+    expect(groups[1].staff.map((s) => s.person.name)).toEqual(["Bob Brown"]);
+  });
+
+  it("sorts people alphabetically within a duty", () => {
+    // Add a second judge whose name sorts before Alice on group 101.
+    const wcif = {
+      ...sampleWcif,
+      persons: [
+        ...sampleWcif.persons,
+        {
+          registrantId: 7,
+          name: "Aaron Abbott",
+          wcaUserId: 1007,
+          wcaId: null,
+          countryIso2: "MX",
+          roles: [],
+          assignments: [{ activityId: 101, assignmentCode: "staff-judge", stationNumber: 5 }],
+        },
+      ],
+    };
+    const judges = staffByDuty(wcif, 101)[0];
+    expect(judges.assignmentCode).toBe("staff-judge");
+    expect(judges.staff.map((s) => s.person.name)).toEqual(["Aaron Abbott", "Alice Anderson"]);
   });
 });
 

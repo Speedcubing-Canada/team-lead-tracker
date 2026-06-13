@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { summarizeAbsentees } from "./absentees";
+import { absencesByGroup, absencesByPerson, summarizeAbsentees } from "./absentees";
 import { checkDocId, type CheckRecord } from "./checks";
 import { sampleWcif } from "../test/fixtures/wcif";
 
@@ -37,5 +37,35 @@ describe("summarizeAbsentees", () => {
     expect(summarizeAbsentees(sampleWcif, new Map([[checkDocId(101, 1), rec("present")]]))).toEqual(
       [],
     );
+  });
+});
+
+describe("absencesByPerson", () => {
+  it("counts absences per person, sorted most-absent first, present excluded", () => {
+    const checks = new Map<string, CheckRecord>([
+      [checkDocId(101, 2), rec("absent")], // Bob
+      [checkDocId(102, 2), rec("absent")], // Bob
+      [checkDocId(201, 4), rec("absent")], // Dave
+      [checkDocId(101, 1), rec("present")], // Alice present -> excluded
+    ]);
+    expect(absencesByPerson(sampleWcif, checks)).toEqual([
+      { label: "Bob Brown", count: 2 },
+      { label: "Dave Davis", count: 1 },
+    ]);
+  });
+});
+
+describe("absencesByGroup", () => {
+  it("counts absences per group with clean 'round · Group N' labels, sorted desc", () => {
+    const checks = new Map<string, CheckRecord>([
+      [checkDocId(101, 1), rec("absent")], // 333 r1 g1
+      [checkDocId(101, 2), rec("absent")], // 333 r1 g1
+      [checkDocId(201, 4), rec("absent")], // 444 r1 g1
+      [checkDocId(102, 2), rec("present")], // excluded
+    ]);
+    expect(absencesByGroup(sampleWcif, checks)).toEqual([
+      { label: "3x3x3 Cube, Round 1 · Group 1", count: 2 },
+      { label: "4x4x4 Cube, Round 1 · Group 1", count: 1 },
+    ]);
   });
 });
