@@ -1,0 +1,27 @@
+name: Deploy hosting (prod)
+
+# Triggers a production hosting deploy when a release tag (v*) is pushed,
+# or manually from the Actions tab. Functions are deployed separately (npm run deploy:functions).
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run test
+      - run: npm run build          # reads committed .env.production (no build secrets needed)
+      - uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          projectId: team-lead-tracker
+          channelId: live           # deploy to the live channel, not a preview
