@@ -41,7 +41,7 @@ service cloud.firestore {
       match /people/{wcaUserId} {
         allow read: if isMember(compId);
         allow create, update: if isPrivileged(compId)
-          && request.resource.data.updatedByWcaId is int
+          && request.resource.data.uploadedByWcaId is int
           && request.resource.data.photoPath is string;
         allow delete: if isPrivileged(compId);
       }
