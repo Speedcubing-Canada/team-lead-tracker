@@ -12,6 +12,9 @@ export async function resizeImageToJpeg(
 ): Promise<Blob> {
   const bitmap = await loadImage(file);
   const { width, height } = bitmap;
+  if (!width || !height) {
+    throw new Error("Couldn't read that photo — try a different image");
+  }
   const scale = Math.min(1, maxDim / Math.max(width, height));
   const w = Math.max(1, Math.round(width * scale));
   const h = Math.max(1, Math.round(height * scale));
@@ -31,17 +34,25 @@ export async function resizeImageToJpeg(
   return blob;
 }
 
-/** Decode a File into something drawable, preferring createImageBitmap. */
+/**
+ * Decode a File into something drawable. Prefer createImageBitmap, but fall back
+ * to an <img> element if it's missing OR rejects (some browsers/formats reject
+ * createImageBitmap yet still decode via <img>).
+ */
 async function loadImage(file: File): Promise<ImageBitmap | HTMLImageElement> {
   if (typeof createImageBitmap === "function") {
-    return createImageBitmap(file);
+    try {
+      return await createImageBitmap(file);
+    } catch {
+      // fall through to the <img> decoder
+    }
   }
   const url = URL.createObjectURL(file);
   try {
     const img = new Image();
     await new Promise<void>((resolve, reject) => {
       img.onload = () => resolve();
-      img.onerror = () => reject(new Error("Could not load the image"));
+      img.onerror = () => reject(new Error("Couldn't read that photo — try a different image"));
       img.src = url;
     });
     return img;

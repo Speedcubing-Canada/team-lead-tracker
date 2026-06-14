@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { PersonSheet } from "./PersonSheet";
 import type { WcifPerson } from "../lib/wca";
 
@@ -103,5 +103,40 @@ describe("PersonSheet", () => {
     expect(screen.getByLabelText("Replace photo")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Remove photo" }));
     expect(onRemove).toHaveBeenCalledTimes(1);
+  });
+
+  it("surfaces an error (with the code) when an upload fails", async () => {
+    const onUpload = vi.fn().mockRejectedValue({ code: "storage/unauthorized" });
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    render(<PersonSheet person={base} onClose={() => {}} canUpload onUpload={onUpload} />);
+
+    const file = new File(["x"], "face.png", { type: "image/png" });
+    fireEvent.change(screen.getByLabelText("Upload photo"), { target: { files: [file] } });
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("storage/unauthorized");
+    // busy cleared again afterwards
+    await waitFor(() => expect(screen.getByLabelText("Upload photo")).toBeInTheDocument());
+    spy.mockRestore();
+  });
+
+  it("surfaces an error when removal fails", async () => {
+    const onRemove = vi.fn().mockRejectedValue({ code: "storage/retry-limit-exceeded" });
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    render(
+      <PersonSheet
+        person={base}
+        onClose={() => {}}
+        canUpload
+        photo={photoMeta}
+        photoUrl="https://uploaded.example/p.jpg"
+        onUpload={vi.fn()}
+        onRemove={onRemove}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Remove photo" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("storage/retry-limit-exceeded");
+    spy.mockRestore();
   });
 });

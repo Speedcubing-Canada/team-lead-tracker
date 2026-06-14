@@ -28,6 +28,7 @@ export function PersonSheet({
   onRemove?: () => void | Promise<void>;
 }) {
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -43,9 +44,13 @@ export function PersonSheet({
     const file = e.target.files?.[0];
     e.target.value = ""; // allow re-picking the same file
     if (!file || !onUpload) return;
+    setError(null);
     setBusy(true);
     try {
       await onUpload(file);
+    } catch (err) {
+      console.error("Photo upload failed", err);
+      setError(`Upload failed: ${describeError(err)}`);
     } finally {
       setBusy(false);
     }
@@ -53,9 +58,13 @@ export function PersonSheet({
 
   async function handleRemove() {
     if (!onRemove) return;
+    setError(null);
     setBusy(true);
     try {
       await onRemove();
+    } catch (err) {
+      console.error("Photo removal failed", err);
+      setError(`Couldn't remove the photo: ${describeError(err)}`);
     } finally {
       setBusy(false);
     }
@@ -139,7 +148,6 @@ export function PersonSheet({
               <input
                 type="file"
                 accept="image/*"
-                capture="environment"
                 className="sr-only"
                 disabled={busy}
                 onChange={handleFile}
@@ -155,6 +163,11 @@ export function PersonSheet({
                 Remove photo
               </button>
             )}
+            {error && (
+              <p role="alert" className="text-sm font-medium text-rose-600 dark:text-rose-400">
+                {error}
+              </p>
+            )}
           </div>
         )}
 
@@ -168,6 +181,16 @@ export function PersonSheet({
       </div>
     </div>
   );
+}
+
+/** Best-effort human-readable string from a thrown value (Firebase errors carry a `code`). */
+function describeError(err: unknown): string {
+  if (err && typeof err === "object") {
+    const e = err as { code?: unknown; message?: unknown };
+    if (typeof e.code === "string" && e.code) return e.code;
+    if (typeof e.message === "string" && e.message) return e.message;
+  }
+  return String(err);
 }
 
 function initials(name: string): string {

@@ -1,30 +1,34 @@
 rules_version = '2';
 
 // Person photos uploaded by delegates so stage leads can match a name to a face.
-// Access mirrors firestore.rules: any member of the competition may read; only
-// privileged members (delegates/organizers, per the `privileged` flag on their
-// membership doc) may write. Membership is read cross-service via firestore.get.
+//
+// Access is gated on the user's Auth custom claims (set by grantCompetitionAccess),
+// NOT on a cross-service firestore.get — that proved unreliable from Storage rules
+// and denied every write (storage/unauthorized). The claims:
+//   request.auth.token.comps[compId]           -> member of the competition (read)
+//   request.auth.token.privilegedComps[compId] -> delegate/organizer (write/delete)
+// The `!= null` guards avoid erroring when an older token lacks the claim.
 service firebase.storage {
   match /b/{bucket}/o {
-    function memberDoc(compId) {
-      return firestore.get(
-        /databases/(default)/documents/competitions/$(compId)/members/$(request.auth.uid)
-      );
+    function isMember(compId) {
+      return request.auth != null
+        && request.auth.token.comps != null
+        && request.auth.token.comps[compId] == true;
+    }
+    function isPrivileged(compId) {
+      return request.auth != null
+        && request.auth.token.privilegedComps != null
+        && request.auth.token.privilegedComps[compId] == true;
     }
 
     match /competitions/{compId}/people/{fileName} {
-      allow read: if request.auth != null
-        && firestore.exists(
-          /databases/(default)/documents/competitions/$(compId)/members/$(request.auth.uid)
-        );
+      allow read: if isMember(compId);
 
-      allow write: if request.auth != null
-        && memberDoc(compId).data.privileged == true
+      allow write: if isPrivileged(compId)
         && request.resource.contentType.matches('image/.*')
         && request.resource.size < 2 * 1024 * 1024;
 
-      allow delete: if request.auth != null
-        && memberDoc(compId).data.privileged == true;
+      allow delete: if isPrivileged(compId);
     }
   }
 }

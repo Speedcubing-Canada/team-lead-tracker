@@ -95,6 +95,20 @@ export const grantCompetitionAccess = onCall(
 
     const privileged = isPrivileged(wcif, wcaUserId);
 
+    // Accumulate per-competition access into the user's Auth custom claims so
+    // Storage rules can gate uploads on the token directly (cross-service
+    // firestore.get from Storage rules proved unreliable). `comps` = every
+    // competition the user is a member of (read access); `privilegedComps` =
+    // those where they're a delegate/organizer (write access). The client
+    // force-refreshes its ID token after this call so the claims take effect.
+    const auth = getAuth();
+    const existing = (await auth.getUser(request.auth.uid)).customClaims ?? {};
+    const comps: Record<string, true> = { ...(existing.comps ?? {}), [competitionId]: true };
+    const privilegedComps: Record<string, true> = { ...(existing.privilegedComps ?? {}) };
+    if (privileged) privilegedComps[competitionId] = true;
+    else delete privilegedComps[competitionId];
+    await auth.setCustomUserClaims(request.auth.uid, { ...existing, comps, privilegedComps });
+
     const db = getFirestore();
     const compRef = db.doc(`competitions/${competitionId}`);
     await compRef.set(

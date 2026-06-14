@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
+import { auth } from "../lib/firebase";
 import { grantCompetitionAccess } from "../lib/authApi";
 import { loadMyCompetitions } from "../lib/myCompetitions";
 import { ThemeToggle } from "../components/ThemeToggle";
@@ -37,6 +38,9 @@ export default function Login() {
     setError(null);
     try {
       await grantCompetitionAccess(competitionId);
+      // Pull the freshly-set comps/privilegedComps claims into the active ID
+      // token so Storage rules (which read the token) authorize this session.
+      await auth().currentUser?.getIdToken(true);
       navigate(`/c/${encodeURIComponent(competitionId)}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not open this competition.");
