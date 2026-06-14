@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canAccessCompetition, type AccessWcif } from "./access";
+import { canAccessCompetition, isPrivileged, type AccessWcif } from "./access";
 
 const wcif: AccessWcif = {
   persons: [
@@ -20,5 +20,18 @@ describe("canAccessCompetition (functions)", () => {
   it("denies plain competitors and unknown users", () => {
     expect(canAccessCompetition(wcif, 4)).toBe(false);
     expect(canAccessCompetition(wcif, 999)).toBe(false);
+  });
+});
+
+describe("isPrivileged (functions)", () => {
+  it("is true only for delegates and organizers", () => {
+    expect(isPrivileged(wcif, 1)).toBe(true);
+    expect(isPrivileged(wcif, 2)).toBe(true);
+  });
+
+  it("is false for staff-only members, competitors, and unknown users", () => {
+    expect(isPrivileged(wcif, 3)).toBe(false);
+    expect(isPrivileged(wcif, 4)).toBe(false);
+    expect(isPrivileged(wcif, 999)).toBe(false);
   });
 });

@@ -1,5 +1,13 @@
+import { useCallback, useEffect, useState } from "react";
 import { Navigate, NavLink, Outlet, useParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
+import {
+  fetchPrivileged,
+  removePersonPhoto,
+  subscribePeoplePhotos,
+  uploadPersonPhoto,
+  type PersonPhoto,
+} from "../lib/photos";
 import { PersonSheetProvider } from "./PersonSheetProvider";
 
 /**
@@ -12,6 +20,33 @@ export function AppShell() {
   const { user, loading } = useAuth();
   const base = `/c/${competitionId}`;
 
+  const [photos, setPhotos] = useState<Map<number, PersonPhoto>>(new Map());
+  const [canUpload, setCanUpload] = useState(false);
+
+  useEffect(() => {
+    if (!competitionId || !user) return;
+    const unsub = subscribePeoplePhotos(competitionId, setPhotos);
+    let active = true;
+    fetchPrivileged(competitionId)
+      .then((p) => {
+        if (active) setCanUpload(p);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+      unsub();
+    };
+  }, [competitionId, user]);
+
+  const onUploadPhoto = useCallback(
+    (wcaUserId: number, file: File) => uploadPersonPhoto(competitionId!, wcaUserId, file, user!),
+    [competitionId, user],
+  );
+  const onRemovePhoto = useCallback(
+    (wcaUserId: number) => removePersonPhoto(competitionId!, wcaUserId),
+    [competitionId],
+  );
+
   if (loading) {
     return <p className="flex h-full items-center justify-center text-sm text-slate-500 dark:text-slate-400">Loading…</p>;
   }
@@ -20,7 +55,12 @@ export function AppShell() {
   }
 
   return (
-    <PersonSheetProvider>
+    <PersonSheetProvider
+      photos={photos}
+      canUpload={canUpload}
+      onUploadPhoto={onUploadPhoto}
+      onRemovePhoto={onRemovePhoto}
+    >
       <div className="flex h-full flex-col bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-slate-100">
         <main className="flex-1 overflow-y-auto pb-[env(safe-area-inset-bottom)]">
           <Outlet />

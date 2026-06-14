@@ -16,7 +16,7 @@ import { getAuth } from "firebase-admin/auth";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
-import { canAccessCompetition } from "./access.js";
+import { canAccessCompetition, isPrivileged } from "./access.js";
 import type { MyCompetition } from "./competitions.js";
 import {
   exchangeCodeForToken,
@@ -68,7 +68,9 @@ export const authWithWca = onCall(
 );
 
 export const grantCompetitionAccess = onCall(
-  async (request): Promise<{ ok: true; competitionName: string | null }> => {
+  async (
+    request,
+  ): Promise<{ ok: true; competitionName: string | null; privileged: boolean }> => {
     if (!request.auth) {
       throw new HttpsError("unauthenticated", "Sign in first");
     }
@@ -91,6 +93,8 @@ export const grantCompetitionAccess = onCall(
       );
     }
 
+    const privileged = isPrivileged(wcif, wcaUserId);
+
     const db = getFirestore();
     const compRef = db.doc(`competitions/${competitionId}`);
     await compRef.set(
@@ -100,9 +104,10 @@ export const grantCompetitionAccess = onCall(
     await compRef.collection("members").doc(request.auth.uid).set({
       wcaUserId,
       name,
+      privileged,
       updatedAt: FieldValue.serverTimestamp(),
     });
 
-    return { ok: true, competitionName: wcif.name ?? null };
+    return { ok: true, competitionName: wcif.name ?? null, privileged };
   },
 );

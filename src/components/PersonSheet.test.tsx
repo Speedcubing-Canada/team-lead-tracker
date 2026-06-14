@@ -52,4 +52,56 @@ describe("PersonSheet", () => {
     fireEvent.click(screen.getByRole("button", { name: "Close" }));
     expect(onClose).toHaveBeenCalledTimes(2);
   });
+
+  const photoMeta = { photoPath: "p", uploadedByName: "Dana Delegate", uploadedByWcaId: 9 };
+
+  it("prefers an uploaded photo over the WCA avatar", () => {
+    render(
+      <PersonSheet
+        person={base}
+        onClose={() => {}}
+        photo={photoMeta}
+        photoUrl="https://uploaded.example/p.jpg"
+      />,
+    );
+    expect(screen.getByRole("img", { name: "Alice Anderson" })).toHaveAttribute(
+      "src",
+      "https://uploaded.example/p.jpg",
+    );
+    expect(screen.getByText("Photo added by Dana Delegate")).toBeInTheDocument();
+  });
+
+  it("hides upload/remove controls when the lead can't upload", () => {
+    render(<PersonSheet person={base} onClose={() => {}} canUpload={false} />);
+    expect(screen.queryByText(/photo/i)).not.toBeInTheDocument();
+  });
+
+  it("shows Upload (no Remove) when privileged and no photo exists, and fires onUpload", () => {
+    const onUpload = vi.fn();
+    render(<PersonSheet person={base} onClose={() => {}} canUpload onUpload={onUpload} />);
+    expect(screen.queryByRole("button", { name: "Remove photo" })).not.toBeInTheDocument();
+
+    const file = new File(["x"], "face.png", { type: "image/png" });
+    fireEvent.change(screen.getByLabelText("Upload photo"), { target: { files: [file] } });
+    expect(onUpload).toHaveBeenCalledWith(file);
+  });
+
+  it("shows Replace + Remove and fires onRemove when a photo exists", () => {
+    const onRemove = vi.fn();
+    render(
+      <PersonSheet
+        person={base}
+        onClose={() => {}}
+        canUpload
+        photo={photoMeta}
+        photoUrl="https://uploaded.example/p.jpg"
+        onUpload={vi.fn()}
+        onRemove={onRemove}
+      />,
+    );
+
+    expect(screen.getByLabelText("Replace photo")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Remove photo" }));
+    expect(onRemove).toHaveBeenCalledTimes(1);
+  });
 });

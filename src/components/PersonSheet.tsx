@@ -1,12 +1,34 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { wcaProfileUrl, type WcifPerson } from "../lib/wca";
+import type { PersonPhoto } from "../lib/photos";
 
 /**
- * Mobile bottom-sheet showing a staffer's WCA profile so a lead can match a
- * name to a face. The avatar <img> only mounts here, so the photo is fetched
- * strictly on demand (never preloaded with the staff list).
+ * Mobile bottom-sheet showing a staffer's profile so a lead can match a name to
+ * a face. Prefers a delegate-uploaded photo over the WCA avatar; the image only
+ * mounts here, so the photo is fetched strictly on demand (never preloaded with
+ * the staff list). Privileged leads get upload/replace/remove controls.
  */
-export function PersonSheet({ person, onClose }: { person: WcifPerson; onClose: () => void }) {
+export function PersonSheet({
+  person,
+  onClose,
+  photo = null,
+  photoUrl = null,
+  canUpload = false,
+  onUpload,
+  onRemove,
+}: {
+  person: WcifPerson;
+  onClose: () => void;
+  /** Metadata for an uploaded photo, if one exists (drives attribution + Remove). */
+  photo?: PersonPhoto | null;
+  /** Resolved download URL for the uploaded photo (null if none / still resolving). */
+  photoUrl?: string | null;
+  canUpload?: boolean;
+  onUpload?: (file: File) => void | Promise<void>;
+  onRemove?: () => void | Promise<void>;
+}) {
+  const [busy, setBusy] = useState(false);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -15,7 +37,29 @@ export function PersonSheet({ person, onClose }: { person: WcifPerson; onClose: 
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  const avatarUrl = person.avatar?.url ?? person.avatar?.thumbUrl ?? null;
+  const avatarUrl = photoUrl ?? person.avatar?.url ?? person.avatar?.thumbUrl ?? null;
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-picking the same file
+    if (!file || !onUpload) return;
+    setBusy(true);
+    try {
+      await onUpload(file);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleRemove() {
+    if (!onRemove) return;
+    setBusy(true);
+    try {
+      await onRemove();
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
     <div
@@ -50,6 +94,11 @@ export function PersonSheet({ person, onClose }: { person: WcifPerson; onClose: 
               {person.name}
             </p>
             <p className="text-sm text-slate-500 dark:text-slate-400">{person.countryIso2}</p>
+            {photo && (
+              <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-500">
+                Photo added by {photo.uploadedByName}
+              </p>
+            )}
           </div>
         </div>
 
@@ -78,6 +127,36 @@ export function PersonSheet({ person, onClose }: { person: WcifPerson; onClose: 
             </div>
           )}
         </dl>
+
+        {canUpload && (
+          <div className="mt-4 flex flex-col gap-2">
+            <label
+              className={`flex min-h-12 w-full items-center justify-center rounded-xl bg-indigo-600 text-sm font-semibold text-white ${
+                busy ? "opacity-60" : "cursor-pointer"
+              }`}
+            >
+              {busy ? "Working…" : photo ? "Replace photo" : "Upload photo"}
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="sr-only"
+                disabled={busy}
+                onChange={handleFile}
+              />
+            </label>
+            {photo && (
+              <button
+                type="button"
+                onClick={handleRemove}
+                disabled={busy}
+                className="min-h-12 w-full rounded-xl bg-rose-50 text-sm font-semibold text-rose-600 disabled:opacity-60 dark:bg-rose-950 dark:text-rose-400"
+              >
+                Remove photo
+              </button>
+            )}
+          </div>
+        )}
 
         <button
           type="button"

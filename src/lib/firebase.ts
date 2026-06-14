@@ -2,6 +2,7 @@ import { initializeApp, type FirebaseApp } from "firebase/app";
 import { connectAuthEmulator, getAuth, type Auth } from "firebase/auth";
 import { connectFirestoreEmulator, getFirestore, type Firestore } from "firebase/firestore";
 import { connectFunctionsEmulator, getFunctions, type Functions } from "firebase/functions";
+import { connectStorageEmulator, getStorage, type FirebaseStorage } from "firebase/storage";
 
 /**
  * Firebase is initialized lazily from Vite env vars (see .env.example).
@@ -34,6 +35,7 @@ function getApp(): FirebaseApp {
       connectAuthEmulator(getAuth(app), "http://127.0.0.1:9099", { disableWarnings: true });
       connectFirestoreEmulator(getFirestore(app), "127.0.0.1", 8080);
       connectFunctionsEmulator(getFunctions(app), "127.0.0.1", 5001);
+      connectStorageEmulator(getStorage(app), "127.0.0.1", 9199);
     }
   }
   return app;
@@ -49,4 +51,8 @@ export function db(): Firestore {
 
 export function functions(): Functions {
   return getFunctions(getApp());
+}
+
+export function storage(): FirebaseStorage {
+  return getStorage(getApp());
 }

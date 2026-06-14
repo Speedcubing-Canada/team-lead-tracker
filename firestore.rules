@@ -12,6 +12,13 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/competitions/$(compId)/members/$(request.auth.uid));
     }
 
+    // Privileged = delegate/organizer. The flag is written on the membership doc
+    // by grantCompetitionAccess (Admin SDK), since rules can't read WCIF roles.
+    function isPrivileged(compId) {
+      return request.auth != null
+        && get(/databases/$(database)/documents/competitions/$(compId)/members/$(request.auth.uid)).data.privileged == true;
+    }
+
     match /competitions/{compId} {
       allow read: if isMember(compId);
       allow write: if false; // meta is written by the function
@@ -27,6 +34,16 @@ service cloud.firestore {
           && request.resource.data.status in ['present', 'absent']
           && request.resource.data.updatedByWcaId is int;
         allow delete: if isMember(compId);
+      }
+
+      // Delegate-uploaded photo metadata. Any member can read; only privileged
+      // members (delegates/organizers) can write. Bytes live in Storage.
+      match /people/{wcaUserId} {
+        allow read: if isMember(compId);
+        allow create, update: if isPrivileged(compId)
+          && request.resource.data.updatedByWcaId is int
+          && request.resource.data.photoPath is string;
+        allow delete: if isPrivileged(compId);
       }
     }
   }
