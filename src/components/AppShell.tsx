@@ -1,5 +1,6 @@
 import { Navigate, NavLink, Outlet, useParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
+import { PersonSheetProvider } from "./PersonSheetProvider";
 
 /**
  * Mobile app shell: a scrollable content area with a fixed bottom tab bar.
@@ -19,15 +20,17 @@ export function AppShell() {
   }
 
   return (
-    <div className="flex h-full flex-col bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-slate-100">
-      <main className="flex-1 overflow-y-auto pb-[env(safe-area-inset-bottom)]">
-        <Outlet />
-      </main>
-      <nav className="grid grid-cols-2 border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)] dark:border-slate-700 dark:bg-slate-800">
-        <TabLink to={base} end label="Stage" />
-        <TabLink to={`${base}/shame`} label="Dashboard" />
-      </nav>
-    </div>
+    <PersonSheetProvider>
+      <div className="flex h-full flex-col bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-slate-100">
+        <main className="flex-1 overflow-y-auto pb-[env(safe-area-inset-bottom)]">
+          <Outlet />
+        </main>
+        <nav className="grid grid-cols-2 border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)] dark:border-slate-700 dark:bg-slate-800">
+          <TabLink to={base} end label="Stage" />
+          <TabLink to={`${base}/shame`} label="Dashboard" />
+        </nav>
+      </div>
+    </PersonSheetProvider>
   );
 }
 

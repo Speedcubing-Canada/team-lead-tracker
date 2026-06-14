@@ -12,6 +12,7 @@ import { dutyStyle } from "../lib/duties";
 import { checkDocId, type CheckRecord, type CheckStatus } from "../lib/checks";
 import { loadSelection, saveSelection } from "../lib/selection";
 import { StaffRow } from "./StaffRow";
+import { PersonNameButton } from "./PersonNameButton";
 
 export interface StageBoardHandlers {
   onStatus: (activityId: number, registrantId: number, status: CheckStatus | null) => void;
@@ -245,7 +246,7 @@ function StaffList({
                       key={`${s.person.wcaUserId}-${assignmentCode}`}
                       className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-900 dark:bg-slate-900 dark:text-slate-100"
                     >
-                      {s.person.name}
+                      <PersonNameButton person={s.person} />
                       {s.stationNumber != null && (
                         <span className="ml-2 text-xs text-slate-500 dark:text-slate-400">Station {s.stationNumber}</span>
                       )}
@@ -255,7 +256,7 @@ function StaffList({
                 return (
                   <StaffRow
                     key={`${registrantId}-${assignmentCode}`}
-                    name={s.person.name}
+                    person={s.person}
                     station={s.stationNumber}
                     check={checks.get(checkDocId(groupId, registrantId))}
                     onStatus={(status) => handlers.onStatus(groupId, registrantId, status)}

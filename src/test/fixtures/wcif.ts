@@ -24,6 +24,10 @@ export const sampleWcif: Wcif = {
       countryIso2: "CA",
       roles: ["delegate"],
       assignments: [{ activityId: 101, assignmentCode: "staff-judge", stationNumber: 3 }],
+      avatar: {
+        url: "https://avatars.worldcubeassociation.org/uploads/user/avatar/2015ANDE01/full.jpg",
+        thumbUrl: "https://avatars.worldcubeassociation.org/uploads/user/avatar/2015ANDE01/thumb.jpg",
+      },
     },
     {
       // Pure staffer on the Red Stage across two groups.
@@ -37,6 +41,8 @@ export const sampleWcif: Wcif = {
         { activityId: 101, assignmentCode: "staff-scrambler", stationNumber: null },
         { activityId: 102, assignmentCode: "staff-runner", stationNumber: null },
       ],
+      // Newcomer without a profile photo — exercises the avatar fallback.
+      avatar: null,
     },
     {
       // Organizer with NO assignments — stage cannot be derived (manual fallback).
@@ -47,6 +53,7 @@ export const sampleWcif: Wcif = {
       countryIso2: "GB",
       roles: ["organizer"],
       assignments: [],
+      avatar: null,
     },
     {
       // Competes on Red Stage but STAFFS on Blue Stage — derivation must pick Blue.
@@ -60,6 +67,7 @@ export const sampleWcif: Wcif = {
         { activityId: 101, assignmentCode: "competitor", stationNumber: null },
         { activityId: 201, assignmentCode: "staff-judge", stationNumber: 1 },
       ],
+      avatar: null,
     },
   ],
   events: [

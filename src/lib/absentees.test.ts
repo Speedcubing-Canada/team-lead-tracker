@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   absencesByGroup,
   absencesByPerson,
+  absencesByStage,
+  currentCompetitionDay,
   overallAbsenceRate,
   summarizeAbsentees,
 } from "./absentees";
@@ -47,6 +49,19 @@ describe("summarizeAbsentees", () => {
       [],
     );
   });
+
+  it("scopes the absentee list to a single stage when given a roomId", () => {
+    const checks = new Map<string, CheckRecord>([
+      [checkDocId(101, 2), rec("absent")], // Bob, Red Stage (room 1)
+      [checkDocId(201, 4), rec("absent")], // Dave, Blue Stage (room 2)
+    ]);
+    expect(summarizeAbsentees(sampleWcif, checks, 1).map((r) => r.person.name)).toEqual([
+      "Bob Brown",
+    ]);
+    expect(summarizeAbsentees(sampleWcif, checks, 2).map((r) => r.person.name)).toEqual([
+      "Dave Davis",
+    ]);
+  });
 });
 
 describe("absencesByPerson", () => {
@@ -63,14 +78,40 @@ describe("absencesByPerson", () => {
     ]);
   });
 
-  it("ranks by absence rate, not raw count (a 1/1 no-show beats a 1/2 lapse)", () => {
+  it("ranks by absence rate over *marked* duties, not raw count (a 1/1 no-show beats a 1/2 lapse)", () => {
     const checks = new Map<string, CheckRecord>([
-      [checkDocId(101, 2), rec("absent")], // Bob: 1 of his 2 groups -> 0.5
-      [checkDocId(201, 4), rec("absent")], // Dave: his only group -> 1.0
+      [checkDocId(101, 2), rec("absent")], // Bob: absent on group 1
+      [checkDocId(102, 2), rec("present")], // Bob: present on group 2 -> 1 of 2 marked = 0.5
+      [checkDocId(201, 4), rec("absent")], // Dave: his only marked group -> 1.0
     ]);
     expect(absencesByPerson(sampleWcif, checks, AFTER_COMP)).toEqual([
       { label: "Dave Davis", count: 1, total: 1, rate: 1 },
       { label: "Bob Brown", count: 1, total: 2, rate: 0.5 },
+    ]);
+  });
+
+  it("excludes unmarked duties from the denominator (only present/absent count)", () => {
+    // Bob is assigned to 2 groups but only one is marked; the unmarked one must
+    // not inflate his denominator into a falsely-low rate.
+    const checks = new Map<string, CheckRecord>([
+      [checkDocId(101, 2), rec("absent")], // Bob: marked absent
+      // group 102 (Bob) left unmarked -> ignored
+    ]);
+    expect(absencesByPerson(sampleWcif, checks, AFTER_COMP)).toEqual([
+      { label: "Bob Brown", count: 1, total: 1, rate: 1 },
+    ]);
+  });
+
+  it("scopes to a single stage (room) when given a roomId", () => {
+    const checks = new Map<string, CheckRecord>([
+      [checkDocId(101, 2), rec("absent")], // Bob, Red Stage
+      [checkDocId(201, 4), rec("absent")], // Dave, Blue Stage
+    ]);
+    expect(absencesByPerson(sampleWcif, checks, AFTER_COMP, 1)).toEqual([
+      { label: "Bob Brown", count: 1, total: 1, rate: 1 },
+    ]);
+    expect(absencesByPerson(sampleWcif, checks, AFTER_COMP, 2)).toEqual([
+      { label: "Dave Davis", count: 1, total: 1, rate: 1 },
     ]);
   });
 
@@ -104,14 +145,25 @@ describe("absencesByGroup", () => {
 });
 
 describe("overallAbsenceRate", () => {
-  it("tallies absent staff checks over all staff assignments once the comp has ended", () => {
+  it("tallies absent staff checks over the *marked* duties, ignoring unmarked ones", () => {
     const checks = new Map<string, CheckRecord>([
       [checkDocId(101, 1), rec("absent")], // Alice absent
       [checkDocId(101, 2), rec("absent")], // Bob absent
-      [checkDocId(201, 4), rec("present")], // present -> not counted as absent
+      [checkDocId(201, 4), rec("present")], // present -> in denominator, not numerator
+      // Bob's group-102 duty is left unmarked, so it must not count toward total.
     ]);
-    // Staff assignments across the comp: Alice 1, Bob 2, Dave 1 = 4.
-    expect(overallAbsenceRate(sampleWcif, checks, AFTER_COMP)).toEqual({ absent: 2, total: 4 });
+    // 3 duties were actually marked (2 absent + 1 present); the 4th assignment is unmarked.
+    expect(overallAbsenceRate(sampleWcif, checks, AFTER_COMP)).toEqual({ absent: 2, total: 3 });
+  });
+
+  it("scopes the rate to one stage when given a roomId", () => {
+    const checks = new Map<string, CheckRecord>([
+      [checkDocId(101, 1), rec("absent")], // Alice, Red Stage
+      [checkDocId(101, 2), rec("present")], // Bob, Red Stage
+      [checkDocId(201, 4), rec("absent")], // Dave, Blue Stage
+    ]);
+    expect(overallAbsenceRate(sampleWcif, checks, AFTER_COMP, 1)).toEqual({ absent: 1, total: 2 });
+    expect(overallAbsenceRate(sampleWcif, checks, AFTER_COMP, 2)).toEqual({ absent: 1, total: 1 });
   });
 
   it("counts only started assignments, so the rate isn't diluted early in the comp", () => {
@@ -123,5 +175,42 @@ describe("overallAbsenceRate", () => {
       [checkDocId(102, 2), rec("absent")], // Bob, future group -> excluded
     ]);
     expect(overallAbsenceRate(sampleWcif, checks, now)).toEqual({ absent: 2, total: 2 });
+  });
+});
+
+describe("absencesByStage", () => {
+  it("compares stages for one day, rating absences over that stage's marked duties", () => {
+    const checks = new Map<string, CheckRecord>([
+      [checkDocId(101, 1), rec("absent")], // Red, day 1
+      [checkDocId(101, 2), rec("present")], // Red, day 1 -> Red marked = 2, absent = 1 -> 0.5
+      [checkDocId(201, 4), rec("present")], // Blue, day 1 -> Blue marked = 1, absent = 0 -> 0
+    ]);
+    expect(absencesByStage(sampleWcif, checks, "2026-07-01", AFTER_COMP)).toEqual([
+      { label: "Red Stage", count: 1, total: 2, rate: 0.5 },
+      { label: "Blue Stage", count: 0, total: 1, rate: 0 },
+    ]);
+  });
+
+  it("excludes checks from other days so daily stage rotation isn't mixed", () => {
+    const checks = new Map<string, CheckRecord>([
+      [checkDocId(101, 1), rec("absent")], // Red, day 1
+      [checkDocId(111, 2), rec("absent")], // Red, day 2 (2x2 group) -> excluded when querying day 1
+    ]);
+    expect(absencesByStage(sampleWcif, checks, "2026-07-01", AFTER_COMP)).toEqual([
+      { label: "Red Stage", count: 1, total: 1, rate: 1 },
+    ]);
+  });
+});
+
+describe("currentCompetitionDay", () => {
+  it("returns the latest day that has a started group", () => {
+    // Mid-day-1: only day 1 groups have started.
+    expect(currentCompetitionDay(sampleWcif, new Date("2026-07-01T13:15:00Z"))).toBe("2026-07-01");
+    // After everything: the latest day.
+    expect(currentCompetitionDay(sampleWcif, AFTER_COMP)).toBe("2026-07-02");
+  });
+
+  it("falls back to the first scheduled day before the comp starts", () => {
+    expect(currentCompetitionDay(sampleWcif, new Date("2026-06-01T00:00:00Z"))).toBe("2026-07-01");
   });
 });

@@ -24,6 +24,8 @@ export interface WcifPerson {
   countryIso2: string;
   roles: string[];
   assignments: WcifAssignment[];
+  /** WCA profile photo. Present in the public WCIF; null when the person has none. */
+  avatar: { url: string; thumbUrl: string } | null;
 }
 
 export interface WcifAssignment {
@@ -77,6 +79,11 @@ export interface MyCompetition {
 }
 
 const WCA_ORIGIN = import.meta.env?.VITE_WCA_ORIGIN ?? "https://www.worldcubeassociation.org";
+
+/** Public WCA profile page for a person, e.g. .../persons/2015ANDE01. */
+export function wcaProfileUrl(wcaId: string): string {
+  return `${WCA_ORIGIN}/persons/${wcaId}`;
+}
 
 /** Build the WCA OAuth authorize URL to redirect the browser to (scope: public). */
 export function buildWcaAuthorizeUrl(state: string): string {

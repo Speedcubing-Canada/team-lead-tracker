@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { toggleStatus, type CheckRecord, type CheckStatus } from "../lib/checks";
+import type { WcifPerson } from "../lib/wca";
+import { PersonNameButton } from "./PersonNameButton";
 
 interface StaffRowProps {
-  name: string;
+  person: WcifPerson;
   station: number | null;
   check?: CheckRecord;
   onStatus: (status: CheckStatus | null) => void;
@@ -14,7 +16,7 @@ interface StaffRowProps {
  * the controls are compact icon buttons on the right: present (✓), absent (✕),
  * and a note toggle (💬) that stays out of the way until tapped.
  */
-export function StaffRow({ name, station, check, onStatus, onNote }: StaffRowProps) {
+export function StaffRow({ person, station, check, onStatus, onNote }: StaffRowProps) {
   const status = check?.status ?? null;
 
   // Local note state, kept in sync with remote unless this lead is editing.
@@ -39,7 +41,10 @@ export function StaffRow({ name, station, check, onStatus, onNote }: StaffRowPro
     <li className="rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-900">
       <div className="flex items-center gap-2">
         <span className="min-w-0 flex-1">
-          <span className="block break-words text-sm text-slate-900 dark:text-slate-100">{name}</span>
+          <PersonNameButton
+            person={person}
+            className="block break-words text-sm text-slate-900 dark:text-slate-100"
+          />
           {station != null && <span className="text-xs text-slate-500 dark:text-slate-400">Station {station}</span>}
         </span>
         <span className="flex shrink-0 items-center gap-1">

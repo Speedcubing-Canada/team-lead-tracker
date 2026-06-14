@@ -165,6 +165,7 @@ describe("staffByDuty", () => {
           countryIso2: "MX",
           roles: [],
           assignments: [{ activityId: 101, assignmentCode: "staff-judge", stationNumber: 5 }],
+          avatar: null,
         },
       ],
     };
@@ -229,6 +230,7 @@ describe("defaultStageRoomId", () => {
           wcaId: null,
           countryIso2: "US",
           roles: [],
+          avatar: null,
           assignments: [
             { activityId: 3, assignmentCode: "staff-judge", stationNumber: null }, // room B, day 1
             { activityId: 11, assignmentCode: "staff-judge", stationNumber: null }, // room A, day 2
@@ -324,6 +326,7 @@ describe("canAccessCompetition", () => {
           countryIso2: "DE",
           roles: [],
           assignments: [{ activityId: 101, assignmentCode: "competitor", stationNumber: null }],
+          avatar: null,
         },
       ],
     };

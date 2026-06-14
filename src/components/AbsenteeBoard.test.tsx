@@ -12,12 +12,25 @@ const person = (registrantId: number, name: string): WcifPerson => ({
   countryIso2: "CA",
   roles: [],
   assignments: [],
+  avatar: null,
 });
 
 describe("AbsenteeBoard", () => {
   it("celebrates when no one is absent", () => {
     render(<AbsenteeBoard absentees={[]} />);
     expect(screen.getByText(/Everyone's on it/)).toBeInTheDocument();
+  });
+
+  it("renders the per-stage comparison chart, even with nobody absent", () => {
+    render(
+      <AbsenteeBoard
+        absentees={[]}
+        byStage={[{ label: "Red Stage", count: 1, total: 4, rate: 0.25 }]}
+      />,
+    );
+    expect(screen.getByText(/Everyone's on it/)).toBeInTheDocument();
+    expect(screen.getByText("Absences per stage")).toBeInTheDocument();
+    expect(screen.getByText("Red Stage")).toBeInTheDocument();
   });
 
   it("lists absentees with their missed groups and notes", () => {

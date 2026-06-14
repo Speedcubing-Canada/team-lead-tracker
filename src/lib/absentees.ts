@@ -1,5 +1,5 @@
 import type { Wcif, WcifPerson } from "./wca";
-import { activityById, groupsForRoom, listStages, staffForGroup } from "./wcif";
+import { activityById, groupsForRoom, listDays, listStages, roomIdForActivity } from "./wcif";
 import { parseCheckDocId, type CheckRecord } from "./checks";
 
 export interface MissedGroup {
@@ -14,8 +14,9 @@ export interface AbsenteeSummary {
 
 /**
  * A labeled tally, used to drive the shame-page bar charts. `count` is the
- * absences, `total` the denominator they're measured against (a person's staff
- * assignments / a group's staff), and `rate` = count / total (0 when total is 0).
+ * absences, `total` the denominator they're measured against — the number of
+ * *marked* duties (present + absent); duties nobody has ticked yes/no yet are
+ * excluded so they can't pose as "showed up". `rate` = count / total (0 when 0).
  */
 export interface AbsenceCount {
   label: string;
@@ -24,27 +25,51 @@ export interface AbsenceCount {
   rate: number;
 }
 
-/** A staff assignment code is any code in the "staff-*" namespace. */
-function isStaffCode(code: string): boolean {
-  return code.startsWith("staff");
+/** Optional scope for the dashboard selectors: a single stage and/or a single day. */
+interface Scope {
+  /** Restrict to one stage (room id); omit/null for the whole competition. */
+  roomId?: number | null;
+  /** Restrict to one calendar day (YYYY-MM-DD); omit/null for every day. */
+  date?: string | null;
 }
 
 /**
- * Ids of the group activities that have already started by `now`. Rates are
- * measured against these only — counting groups that haven't happened yet would
- * drown every rate in a huge denominator (e.g. 0/54 at the start of the comp).
+ * Ids of the group activities that have already started by `now`, optionally
+ * narrowed to one stage and/or one day. Rates are measured against started
+ * groups only — counting groups that haven't happened yet would drown every
+ * rate in a huge denominator (e.g. 0/54 at the start of the comp).
  */
-function startedActivityIds(wcif: Wcif, now: Date): Set<number> {
+function startedActivityIds(wcif: Wcif, now: Date, scope: Scope = {}): Set<number> {
   const started = new Set<number>();
   const nowMs = now.getTime();
   for (const stage of listStages(wcif)) {
+    if (scope.roomId != null && stage.id !== scope.roomId) continue;
     for (const group of groupsForRoom(wcif, stage.id)) {
+      if (scope.date != null && group.date !== scope.date) continue;
       if (new Date(group.activity.startTime).getTime() <= nowMs) {
         started.add(group.activity.id);
       }
     }
   }
   return started;
+}
+
+/**
+ * A check that lands on a started, in-scope group and a real registrant — i.e. a
+ * genuinely *marked* duty. Yields both present and absent so callers can use the
+ * full marked set as the denominator and the absent subset as the numerator.
+ */
+function* markedChecks(
+  wcif: Wcif,
+  checks: Map<string, CheckRecord>,
+  started: Set<number>,
+): Iterable<{ activityId: number; registrantId: number; record: CheckRecord }> {
+  for (const [id, record] of checks) {
+    const parsed = parseCheckDocId(id);
+    if (!parsed || !started.has(parsed.activityId)) continue;
+    if (!wcif.persons.some((p) => p.registrantId === parsed.registrantId)) continue;
+    yield { activityId: parsed.activityId, registrantId: parsed.registrantId, record };
+  }
 }
 
 /**
@@ -55,6 +80,7 @@ function startedActivityIds(wcif: Wcif, now: Date): Set<number> {
 export function summarizeAbsentees(
   wcif: Wcif,
   checks: Map<string, CheckRecord>,
+  roomId?: number | null,
 ): AbsenteeSummary[] {
   const byRegistrant = new Map<number, AbsenteeSummary>();
 
@@ -62,6 +88,7 @@ export function summarizeAbsentees(
     if (record.status !== "absent") continue;
     const parsed = parseCheckDocId(id);
     if (!parsed) continue;
+    if (roomId != null && roomIdForActivity(wcif, parsed.activityId) !== roomId) continue;
 
     const person = wcif.persons.find((p) => p.registrantId === parsed.registrantId);
     if (!person) continue;
@@ -96,30 +123,30 @@ function rankedCounts(entries: { label: string; count: number; total: number }[]
 
 /**
  * How many of their *already-started* groups a person is currently marked absent
- * for, over how many such groups they're assigned to, worst first.
+ * for, over how many such duties they've actually been marked on (present or
+ * absent), worst first. Optionally scoped to a single stage.
  */
 export function absencesByPerson(
   wcif: Wcif,
   checks: Map<string, CheckRecord>,
   now: Date = new Date(),
+  roomId?: number | null,
 ): AbsenceCount[] {
-  const started = startedActivityIds(wcif, now);
-  const counts = new Map<number, number>();
-  for (const [id, record] of checks) {
-    if (record.status !== "absent") continue;
-    const parsed = parseCheckDocId(id);
-    if (!parsed || !started.has(parsed.activityId)) continue;
-    if (!wcif.persons.some((p) => p.registrantId === parsed.registrantId)) continue;
-    counts.set(parsed.registrantId, (counts.get(parsed.registrantId) ?? 0) + 1);
+  const started = startedActivityIds(wcif, now, { roomId });
+  const tally = new Map<number, { absent: number; total: number }>();
+  for (const { registrantId, record } of markedChecks(wcif, checks, started)) {
+    const t = tally.get(registrantId) ?? { absent: 0, total: 0 };
+    t.total += 1;
+    if (record.status === "absent") t.absent += 1;
+    tally.set(registrantId, t);
   }
 
-  const entries = [...counts.entries()].map(([registrantId, count]) => {
-    const person = wcif.persons.find((p) => p.registrantId === registrantId)!;
-    const total = person.assignments.filter(
-      (a) => isStaffCode(a.assignmentCode) && started.has(a.activityId),
-    ).length;
-    return { label: person.name, count, total };
-  });
+  const entries = [...tally.entries()]
+    .filter(([, t]) => t.absent > 0)
+    .map(([registrantId, t]) => {
+      const person = wcif.persons.find((p) => p.registrantId === registrantId)!;
+      return { label: person.name, count: t.absent, total: t.total };
+    });
   return rankedCounts(entries);
 }
 
@@ -136,56 +163,105 @@ function groupLabels(wcif: Wcif): Map<number, string> {
 
 /**
  * How many of each group's staff are currently marked absent, worst first, with
- * clean labels. The rate is absences over the group's total assigned staff.
+ * clean labels. The rate is absences over the group's *marked* duties (present +
+ * absent). Optionally scoped to a single stage.
  */
 export function absencesByGroup(
   wcif: Wcif,
   checks: Map<string, CheckRecord>,
   now: Date = new Date(),
+  roomId?: number | null,
 ): AbsenceCount[] {
-  const started = startedActivityIds(wcif, now);
+  const started = startedActivityIds(wcif, now, { roomId });
   const labels = groupLabels(wcif);
-  const counts = new Map<number, number>();
-  for (const [id, record] of checks) {
-    if (record.status !== "absent") continue;
-    const parsed = parseCheckDocId(id);
-    if (!parsed || !started.has(parsed.activityId)) continue;
-    counts.set(parsed.activityId, (counts.get(parsed.activityId) ?? 0) + 1);
+  const tally = new Map<number, { absent: number; total: number }>();
+  for (const { activityId, record } of markedChecks(wcif, checks, started)) {
+    const t = tally.get(activityId) ?? { absent: 0, total: 0 };
+    t.total += 1;
+    if (record.status === "absent") t.absent += 1;
+    tally.set(activityId, t);
   }
 
-  const entries = [...counts.entries()].map(([activityId, count]) => {
-    const label =
-      labels.get(activityId) ?? activityById(wcif, activityId)?.name ?? "Unknown group";
-    return { label, count, total: staffForGroup(wcif, activityId).length };
-  });
+  const entries = [...tally.entries()]
+    .filter(([, t]) => t.absent > 0)
+    .map(([activityId, t]) => {
+      const label =
+        labels.get(activityId) ?? activityById(wcif, activityId)?.name ?? "Unknown group";
+      return { label, count: t.absent, total: t.total };
+    });
   return rankedCounts(entries);
 }
 
 /**
- * The competition-wide absence rate for the dashboard's summary line: staff
- * checks marked absent over the total staff assignments — both restricted to
- * groups that have already started, so the rate is meaningful mid-competition.
+ * The absence rate for the dashboard's summary line: staff duties marked absent
+ * over the duties actually *marked* (present + absent) — both restricted to
+ * already-started groups, so the rate is meaningful mid-competition. Unmarked
+ * duties are excluded so they can't quietly pad the denominator as if filled.
+ * Optionally scoped to a single stage.
  */
 export function overallAbsenceRate(
   wcif: Wcif,
   checks: Map<string, CheckRecord>,
   now: Date = new Date(),
+  roomId?: number | null,
 ): { absent: number; total: number } {
-  const started = startedActivityIds(wcif, now);
+  const started = startedActivityIds(wcif, now, { roomId });
   let absent = 0;
-  for (const [id, record] of checks) {
-    if (record.status !== "absent") continue;
-    const parsed = parseCheckDocId(id);
-    if (!parsed || !started.has(parsed.activityId)) continue;
-    if (!wcif.persons.some((p) => p.registrantId === parsed.registrantId)) continue;
-    absent++;
-  }
-
   let total = 0;
-  for (const person of wcif.persons) {
-    total += person.assignments.filter(
-      (a) => isStaffCode(a.assignmentCode) && started.has(a.activityId),
-    ).length;
+  for (const { record } of markedChecks(wcif, checks, started)) {
+    total += 1;
+    if (record.status === "absent") absent += 1;
   }
   return { absent, total };
+}
+
+/**
+ * Per-stage absence rates for a single day, so a team can compare itself against
+ * the other stages. Scoped to one day because staff rotate stages day to day —
+ * pooling days would blend different teams into the same bar. Stages with any
+ * marked duty appear (a clean stage shows at 0%); worst rate first.
+ */
+export function absencesByStage(
+  wcif: Wcif,
+  checks: Map<string, CheckRecord>,
+  date: string,
+  now: Date = new Date(),
+): AbsenceCount[] {
+  const started = startedActivityIds(wcif, now, { date });
+  const names = new Map(listStages(wcif).map((s) => [s.id, s.name]));
+  const tally = new Map<number, { absent: number; total: number }>();
+  for (const { activityId, record } of markedChecks(wcif, checks, started)) {
+    const roomId = roomIdForActivity(wcif, activityId);
+    if (roomId == null) continue;
+    const t = tally.get(roomId) ?? { absent: 0, total: 0 };
+    t.total += 1;
+    if (record.status === "absent") t.absent += 1;
+    tally.set(roomId, t);
+  }
+
+  const entries = [...tally.entries()].map(([roomId, t]) => ({
+    label: names.get(roomId) ?? "Unknown stage",
+    count: t.absent,
+    total: t.total,
+  }));
+  return rankedCounts(entries);
+}
+
+/**
+ * The day (YYYY-MM-DD) the dashboard's stage comparison should default to: the
+ * latest scheduled day that has a group already underway, falling back to the
+ * first scheduled day before the comp begins (null only when there's no schedule).
+ */
+export function currentCompetitionDay(wcif: Wcif, now: Date = new Date()): string | null {
+  const days = listDays(wcif);
+  if (days.length === 0) return null;
+  const nowMs = now.getTime();
+  const startedDates = new Set<string>();
+  for (const stage of listStages(wcif)) {
+    for (const group of groupsForRoom(wcif, stage.id)) {
+      if (new Date(group.activity.startTime).getTime() <= nowMs) startedDates.add(group.date);
+    }
+  }
+  const started = [...startedDates].sort();
+  return started.length > 0 ? started[started.length - 1] : days[0];
 }
