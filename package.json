@@ -9,7 +9,6 @@
     "preview": "vite preview",
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
-    "lint": "eslint .",
     "emulators": "firebase emulators:start",
     "deploy": "npm run build && npm run test && firebase deploy --only hosting",
     "deploy:functions": "npm --prefix functions run build && firebase deploy --only functions"

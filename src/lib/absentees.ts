@@ -83,6 +83,7 @@ export function summarizeAbsentees(
   roomId?: number | null,
 ): AbsenteeSummary[] {
   const byRegistrant = new Map<number, AbsenteeSummary>();
+  const labels = groupLabels(wcif);
 
   for (const [id, record] of checks) {
     if (record.status !== "absent") continue;
@@ -93,7 +94,8 @@ export function summarizeAbsentees(
     const person = wcif.persons.find((p) => p.registrantId === parsed.registrantId);
     if (!person) continue;
 
-    const groupName = activityById(wcif, parsed.activityId)?.name ?? "Unknown group";
+    const groupName =
+      labels.get(parsed.activityId) ?? activityById(wcif, parsed.activityId)?.name ?? "Unknown group";
     let summary = byRegistrant.get(parsed.registrantId);
     if (!summary) {
       summary = { person, missed: [] };
@@ -150,12 +152,12 @@ export function absencesByPerson(
   return rankedCounts(entries);
 }
 
-/** Build a lookup from group activity id to its clean "round · Group N" label. */
+/** Build a lookup from group activity id to its compact "OH R1 · G1" label. */
 function groupLabels(wcif: Wcif): Map<number, string> {
   const map = new Map<number, string>();
   for (const stage of listStages(wcif)) {
     for (const group of groupsForRoom(wcif, stage.id)) {
-      map.set(group.activity.id, group.label);
+      map.set(group.activity.id, group.shortLabel);
     }
   }
   return map;

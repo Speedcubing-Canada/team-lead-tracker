@@ -65,9 +65,10 @@ export function AppShell() {
         <main className="flex-1 overflow-y-auto pb-[env(safe-area-inset-bottom)]">
           <Outlet />
         </main>
-        <nav className="grid grid-cols-2 border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)] dark:border-slate-700 dark:bg-slate-800">
+        <nav className="grid grid-cols-3 border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)] dark:border-slate-700 dark:bg-slate-800">
           <TabLink to={base} end label="Stage" />
           <TabLink to={`${base}/shame`} label="Dashboard" />
+          <TabLink to="/" end label="‹ Comps" />
         </nav>
       </div>
     </PersonSheetProvider>

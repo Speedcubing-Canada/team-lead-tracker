@@ -77,9 +77,11 @@ describe("groupsForRoom", () => {
       roundName: "3x3x3 Cube, Round 1",
       groupNumber: 1,
       label: "3x3x3 Cube, Round 1 · Group 1",
+      shortLabel: "3x3 R1 · G1",
       date: "2026-07-01",
     });
     expect(groups[2].label).toBe("2x2x2 Cube, Round 1 · Group 1");
+    expect(groups[2].shortLabel).toBe("2x2 R1 · G1");
   });
 
   it("excludes groups from other rooms", () => {

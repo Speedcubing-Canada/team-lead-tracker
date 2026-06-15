@@ -43,7 +43,8 @@ export default function AuthCallback() {
         await signInWithCustomToken(auth(), token);
         navigate("/", { replace: true });
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Login failed.");
+        const msg = e instanceof Error ? e.message : "";
+        setError(msg && msg !== "internal" ? msg : "Login failed. Is the server reachable?");
       }
     })();
   }, [params, navigate]);

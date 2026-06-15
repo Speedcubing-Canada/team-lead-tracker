@@ -80,7 +80,7 @@ function byDay(groups: GroupView[]): { date: string; items: { index: number; lab
       bucket = { date: g.date, items: [] };
       out.push(bucket);
     }
-    bucket.items.push({ index, label: g.label });
+    bucket.items.push({ index, label: g.shortLabel });
   });
   return out;
 }

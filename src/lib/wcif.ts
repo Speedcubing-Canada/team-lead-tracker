@@ -1,5 +1,6 @@
 import type { Wcif, WcifActivity, WcifPerson, WcifRoom } from "./wca";
 import { dutyRank } from "./duties";
+import { shortGroupLabel } from "./events";
 
 export interface Stage {
   id: number;
@@ -96,6 +97,8 @@ export interface GroupView {
   groupNumber: number | null;
   /** `${roundName} · Group ${n}`, falling back to the raw name when unparseable. */
   label: string;
+  /** Compact `OH R1 · G1` label for tight selectors; falls back to `label`. */
+  shortLabel: string;
   /** Scheduled date (YYYY-MM-DD), for grouping in a picker. */
   date: string;
 }
@@ -119,11 +122,13 @@ export function groupsForRoom(wcif: Wcif, roomId: number): GroupView[] {
     .flatMap((round) =>
       round.childActivities.map((group): GroupView => {
         const groupNumber = groupNumberFromCode(group.activityCode);
+        const label = groupNumber != null ? `${round.name} · Group ${groupNumber}` : group.name;
         return {
           activity: group,
           roundName: round.name,
           groupNumber,
-          label: groupNumber != null ? `${round.name} · Group ${groupNumber}` : group.name,
+          label,
+          shortLabel: shortGroupLabel(group.activityCode) ?? label,
           date: dateOf(group.startTime),
         };
       }),

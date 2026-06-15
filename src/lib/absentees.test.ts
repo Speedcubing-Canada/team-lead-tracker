@@ -36,12 +36,10 @@ describe("summarizeAbsentees", () => {
 
     const bob = result[0];
     expect(bob.missed).toHaveLength(2);
-    expect(bob.missed.map((m) => m.groupName)).toContain("3x3x3 Cube, Round 1, Group 1");
-    expect(bob.missed.find((m) => m.groupName.endsWith("Group 1"))?.note).toBe("late");
+    expect(bob.missed.map((m) => m.groupName)).toContain("3x3 R1 · G1");
+    expect(bob.missed.find((m) => m.groupName.endsWith("G1"))?.note).toBe("late");
 
-    expect(result[1].missed).toEqual([
-      { groupName: "4x4x4 Cube, Round 1, Group 1", note: "no show" },
-    ]);
+    expect(result[1].missed).toEqual([{ groupName: "4x4 R1 · G1", note: "no show" }]);
   });
 
   it("returns an empty list when nobody is absent", () => {
@@ -129,7 +127,7 @@ describe("absencesByPerson", () => {
 });
 
 describe("absencesByGroup", () => {
-  it("counts absences per group with clean 'round · Group N' labels, sorted desc", () => {
+  it("counts absences per group with compact short labels, sorted desc", () => {
     const checks = new Map<string, CheckRecord>([
       [checkDocId(101, 1), rec("absent")], // 333 r1 g1
       [checkDocId(101, 2), rec("absent")], // 333 r1 g1
@@ -138,8 +136,8 @@ describe("absencesByGroup", () => {
     ]);
     expect(absencesByGroup(sampleWcif, checks, AFTER_COMP)).toEqual([
       // Group 101 has 2 staff (Alice + Bob); group 201 has 1 (Dave) — both fully absent.
-      { label: "3x3x3 Cube, Round 1 · Group 1", count: 2, total: 2, rate: 1 },
-      { label: "4x4x4 Cube, Round 1 · Group 1", count: 1, total: 1, rate: 1 },
+      { label: "3x3 R1 · G1", count: 2, total: 2, rate: 1 },
+      { label: "4x4 R1 · G1", count: 1, total: 1, rate: 1 },
     ]);
   });
 });
