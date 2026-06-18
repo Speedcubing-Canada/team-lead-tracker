@@ -6,6 +6,7 @@ import {
   currentCompetitionDay,
   overallAbsenceRate,
   summarizeAbsentees,
+  wilsonLowerBound,
 } from "./absentees";
 import { checkDocId, type CheckRecord } from "./checks";
 import { sampleWcif } from "../test/fixtures/wcif";
@@ -70,10 +71,19 @@ describe("absencesByPerson", () => {
       [checkDocId(201, 4), rec("absent")], // Dave (assigned to 1 group)
       [checkDocId(101, 1), rec("present")], // Alice present -> excluded
     ]);
-    expect(absencesByPerson(sampleWcif, checks, AFTER_COMP)).toEqual([
+    expect(absencesByPerson(sampleWcif, checks, AFTER_COMP)).toMatchObject([
       { label: "Bob Brown", count: 2, total: 2, rate: 1 },
       { label: "Dave Davis", count: 1, total: 1, rate: 1 },
     ]);
+  });
+
+  it("exposes the Wilson score the ranking is sorted by", () => {
+    const checks = new Map<string, CheckRecord>([
+      [checkDocId(101, 2), rec("absent")], // Bob: absent on group 1
+      [checkDocId(102, 2), rec("present")], // Bob: present on group 2 -> 1 of 2 marked
+    ]);
+    const [bob] = absencesByPerson(sampleWcif, checks, AFTER_COMP);
+    expect(bob.score).toBeCloseTo(wilsonLowerBound(1, 2));
   });
 
   it("ranks by absence rate over *marked* duties, not raw count (a 1/1 no-show beats a 1/2 lapse)", () => {
@@ -82,7 +92,7 @@ describe("absencesByPerson", () => {
       [checkDocId(102, 2), rec("present")], // Bob: present on group 2 -> 1 of 2 marked = 0.5
       [checkDocId(201, 4), rec("absent")], // Dave: his only marked group -> 1.0
     ]);
-    expect(absencesByPerson(sampleWcif, checks, AFTER_COMP)).toEqual([
+    expect(absencesByPerson(sampleWcif, checks, AFTER_COMP)).toMatchObject([
       { label: "Dave Davis", count: 1, total: 1, rate: 1 },
       { label: "Bob Brown", count: 1, total: 2, rate: 0.5 },
     ]);
@@ -95,7 +105,7 @@ describe("absencesByPerson", () => {
       [checkDocId(101, 2), rec("absent")], // Bob: marked absent
       // group 102 (Bob) left unmarked -> ignored
     ]);
-    expect(absencesByPerson(sampleWcif, checks, AFTER_COMP)).toEqual([
+    expect(absencesByPerson(sampleWcif, checks, AFTER_COMP)).toMatchObject([
       { label: "Bob Brown", count: 1, total: 1, rate: 1 },
     ]);
   });
@@ -105,10 +115,10 @@ describe("absencesByPerson", () => {
       [checkDocId(101, 2), rec("absent")], // Bob, Red Stage
       [checkDocId(201, 4), rec("absent")], // Dave, Blue Stage
     ]);
-    expect(absencesByPerson(sampleWcif, checks, AFTER_COMP, 1)).toEqual([
+    expect(absencesByPerson(sampleWcif, checks, AFTER_COMP, 1)).toMatchObject([
       { label: "Bob Brown", count: 1, total: 1, rate: 1 },
     ]);
-    expect(absencesByPerson(sampleWcif, checks, AFTER_COMP, 2)).toEqual([
+    expect(absencesByPerson(sampleWcif, checks, AFTER_COMP, 2)).toMatchObject([
       { label: "Dave Davis", count: 1, total: 1, rate: 1 },
     ]);
   });
@@ -120,7 +130,7 @@ describe("absencesByPerson", () => {
       [checkDocId(101, 2), rec("absent")], // Bob's started group -> counts
       [checkDocId(102, 2), rec("absent")], // Bob's future group -> excluded both sides
     ]);
-    expect(absencesByPerson(sampleWcif, checks, now)).toEqual([
+    expect(absencesByPerson(sampleWcif, checks, now)).toMatchObject([
       { label: "Bob Brown", count: 1, total: 1, rate: 1 },
     ]);
   });
@@ -134,7 +144,7 @@ describe("absencesByGroup", () => {
       [checkDocId(201, 4), rec("absent")], // 444 r1 g1
       [checkDocId(102, 2), rec("present")], // excluded
     ]);
-    expect(absencesByGroup(sampleWcif, checks, AFTER_COMP)).toEqual([
+    expect(absencesByGroup(sampleWcif, checks, AFTER_COMP)).toMatchObject([
       // Group 101 has 2 staff (Alice + Bob); group 201 has 1 (Dave) — both fully absent.
       { label: "3x3 R1 · G1", count: 2, total: 2, rate: 1 },
       { label: "4x4 R1 · G1", count: 1, total: 1, rate: 1 },
@@ -183,7 +193,7 @@ describe("absencesByStage", () => {
       [checkDocId(101, 2), rec("present")], // Red, day 1 -> Red marked = 2, absent = 1 -> 0.5
       [checkDocId(201, 4), rec("present")], // Blue, day 1 -> Blue marked = 1, absent = 0 -> 0
     ]);
-    expect(absencesByStage(sampleWcif, checks, "2026-07-01", AFTER_COMP)).toEqual([
+    expect(absencesByStage(sampleWcif, checks, "2026-07-01", AFTER_COMP)).toMatchObject([
       { label: "Red Stage", count: 1, total: 2, rate: 0.5 },
       { label: "Blue Stage", count: 0, total: 1, rate: 0 },
     ]);
@@ -194,7 +204,7 @@ describe("absencesByStage", () => {
       [checkDocId(101, 1), rec("absent")], // Red, day 1
       [checkDocId(111, 2), rec("absent")], // Red, day 2 (2x2 group) -> excluded when querying day 1
     ]);
-    expect(absencesByStage(sampleWcif, checks, "2026-07-01", AFTER_COMP)).toEqual([
+    expect(absencesByStage(sampleWcif, checks, "2026-07-01", AFTER_COMP)).toMatchObject([
       { label: "Red Stage", count: 1, total: 1, rate: 1 },
     ]);
   });
@@ -210,5 +220,33 @@ describe("currentCompetitionDay", () => {
 
   it("falls back to the first scheduled day before the comp starts", () => {
     expect(currentCompetitionDay(sampleWcif, new Date("2026-06-01T00:00:00Z"))).toBe("2026-07-01");
+  });
+});
+
+describe("wilsonLowerBound", () => {
+  it("rewards larger samples at a fixed rate — the core of the fix", () => {
+    // Same 100% rate, more evidence ranks higher: 3/3 > 2/2 > 1/1.
+    expect(wilsonLowerBound(3, 3)).toBeGreaterThan(wilsonLowerBound(2, 2));
+    expect(wilsonLowerBound(2, 2)).toBeGreaterThan(wilsonLowerBound(1, 1));
+  });
+
+  it("ranks a well-sampled high rate above a perfect-but-tiny record", () => {
+    // The whole point of z=1.96: a confident 8/10 outranks a 3/3, which outranks 1/1.
+    expect(wilsonLowerBound(8, 10)).toBeGreaterThan(wilsonLowerBound(3, 3));
+    expect(wilsonLowerBound(3, 3)).toBeGreaterThan(wilsonLowerBound(1, 1));
+  });
+
+  it("ranks a solid 3/4 above a noisy 1/1 — the case a raw-rate sort gets backwards", () => {
+    // Raw rate would put 1/1 (100%) above 3/4 (75%); Wilson flips it on confidence.
+    expect(wilsonLowerBound(3, 4)).toBeGreaterThan(wilsonLowerBound(1, 1));
+  });
+
+  it("buries a low-rate / high-volume tally below a single no-show", () => {
+    expect(wilsonLowerBound(2, 200)).toBeLessThan(wilsonLowerBound(1, 1));
+  });
+
+  it("returns 0 for an empty denominator without dividing by zero", () => {
+    expect(wilsonLowerBound(0, 0)).toBe(0);
+    expect(wilsonLowerBound(3, 0)).toBe(0);
   });
 });

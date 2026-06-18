@@ -85,11 +85,24 @@ export function wcaProfileUrl(wcaId: string): string {
   return `${WCA_ORIGIN}/persons/${wcaId}`;
 }
 
+/**
+ * The OAuth redirect URI for the *current* origin (custom domain, web.app, or localhost).
+ * Deriving it at runtime keeps the authorize and token-exchange redirect_uri identical on
+ * whatever domain the user loaded the app from. Falls back to the env var when window is
+ * unavailable (tests/SSR).
+ */
+export function wcaRedirectUri(): string {
+  if (typeof window !== "undefined" && window.location?.origin) {
+    return `${window.location.origin}/auth/callback`;
+  }
+  return import.meta.env.VITE_WCA_REDIRECT_URI;
+}
+
 /** Build the WCA OAuth authorize URL to redirect the browser to (scope: public). */
 export function buildWcaAuthorizeUrl(state: string): string {
   const params = new URLSearchParams({
     client_id: import.meta.env.VITE_WCA_CLIENT_ID,
-    redirect_uri: import.meta.env.VITE_WCA_REDIRECT_URI,
+    redirect_uri: wcaRedirectUri(),
     response_type: "code",
     scope: "public",
     state,

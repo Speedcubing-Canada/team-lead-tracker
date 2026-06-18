@@ -25,7 +25,7 @@ describe("AbsenteeBoard", () => {
     render(
       <AbsenteeBoard
         absentees={[]}
-        byStage={[{ label: "Red Stage", count: 1, total: 4, rate: 0.25 }]}
+        byStage={[{ label: "Red Stage", count: 1, total: 4, rate: 0.25, score: 0.1 }]}
       />,
     );
     expect(screen.getByText(/Everyone's on it/)).toBeInTheDocument();

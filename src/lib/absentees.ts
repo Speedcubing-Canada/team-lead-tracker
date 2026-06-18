@@ -22,7 +22,8 @@ export interface AbsenceCount {
   label: string;
   count: number;
   total: number;
-  rate: number;
+  rate: number; // count / total — the % shown in the bar chart
+  score: number; // Wilson lower bound — what the list is sorted by
 }
 
 /** Optional scope for the dashboard selectors: a single stage and/or a single day. */
@@ -112,15 +113,43 @@ export function summarizeAbsentees(
   return result;
 }
 
+/** z for the Wilson interval. 1.96 = 95% confidence: discounts small samples
+ *  hard enough that a well-sampled 8/10 outranks a perfect-but-tiny 3/3, while a
+ *  lone 1/1 sinks well down the board. */
+const WILSON_Z = 1.96;
+
 /**
- * Attach a rate to each tally and rank worst-first: by rate descending (so the
- * bars, which are sized by rate, read top-to-bottom worst), then by raw count,
- * then label for stable ordering. `total === 0` yields a rate of 0.
+ * Lower bound of the Wilson score interval for `count` "successes" out of
+ * `total`. Used as the ranking key so sample size, not just rate, drives the
+ * order: a lone 1/1 carries little confidence and sinks below a well-sampled
+ * 8/10, while a low-rate/high-volume tally (2/200) stays near the bottom.
+ * Returns 0 when total is 0. See "How Not To Sort By Average Rating".
+ */
+export function wilsonLowerBound(count: number, total: number, z = WILSON_Z): number {
+  if (total <= 0) return 0;
+  const p = count / total;
+  const z2 = z * z;
+  const denom = 1 + z2 / total;
+  const centre = p + z2 / (2 * total);
+  const margin = z * Math.sqrt((p * (1 - p) + z2 / (4 * total)) / total);
+  return (centre - margin) / denom;
+}
+
+/**
+ * Attach a rate and ranking score to each tally and rank worst-first. The score
+ * is the Wilson lower bound, so small samples don't dominate the way a raw rate
+ * sort lets a 1/1 sit above an 8/10; `rate` is kept untouched for display. Ties
+ * fall back to raw count then label for stable ordering. `total === 0` yields a
+ * rate and score of 0.
  */
 function rankedCounts(entries: { label: string; count: number; total: number }[]): AbsenceCount[] {
   return entries
-    .map((e) => ({ ...e, rate: e.total > 0 ? e.count / e.total : 0 }))
-    .sort((a, b) => b.rate - a.rate || b.count - a.count || a.label.localeCompare(b.label));
+    .map((e) => ({
+      ...e,
+      rate: e.total > 0 ? e.count / e.total : 0,
+      score: wilsonLowerBound(e.count, e.total),
+    }))
+    .sort((a, b) => b.score - a.score || b.count - a.count || a.label.localeCompare(b.label));
 }
 
 /**

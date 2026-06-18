@@ -8,8 +8,8 @@ describe("BarChart", () => {
       <BarChart
         title="Most forgotten"
         data={[
-          { label: "Bob", count: 4, total: 6, rate: 4 / 6 },
-          { label: "Dave", count: 1, total: 2, rate: 0.5 },
+          { label: "Bob", count: 4, total: 6, rate: 4 / 6, score: 0.5 },
+          { label: "Dave", count: 1, total: 2, rate: 0.5, score: 0.3 },
         ]}
       />,
     );

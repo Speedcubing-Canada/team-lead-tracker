@@ -5,6 +5,7 @@ import { auth } from "../lib/firebase";
 import { authWithWca } from "../lib/authApi";
 import { storeMyCompetitions } from "../lib/myCompetitions";
 import { consumeOAuthState } from "../auth/AuthContext";
+import { wcaRedirectUri } from "../lib/wca";
 
 /** Handles the WCA OAuth redirect: validates state, exchanges the code, signs in. */
 export default function AuthCallback() {
@@ -35,10 +36,7 @@ export default function AuthCallback() {
 
     void (async () => {
       try {
-        const { token, competitions } = await authWithWca(
-          code,
-          import.meta.env.VITE_WCA_REDIRECT_URI,
-        );
+        const { token, competitions } = await authWithWca(code, wcaRedirectUri());
         storeMyCompetitions(competitions);
         await signInWithCustomToken(auth(), token);
         navigate("/", { replace: true });
