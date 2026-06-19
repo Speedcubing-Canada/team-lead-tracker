@@ -11,6 +11,7 @@
  * security rules), so clients can never grant themselves access.
  */
 
+import { gzipSync } from "node:zlib";
 import { initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
@@ -136,10 +137,11 @@ export const grantCompetitionAccess = onCall(
 
 /**
  * Public WCIF proxy. Fetches the WCA WCIF, slims it to the fields the client
- * uses, and returns it with a cache header so Firebase Hosting's CDN gzips and
- * edge-caches the (~45× smaller) response. Used for reloads and routes that
- * don't go through the access-granting flow. Reached via the /api/wcif/**
- * Hosting rewrite, so it's same-origin (no CORS).
+ * uses, gzips it, and returns it with a cache header so Firebase Hosting's CDN
+ * edge-caches the (~45× smaller) response. We gzip here ourselves because
+ * Hosting only auto-compresses static assets, not dynamic function responses.
+ * Used for reloads and routes that don't go through the access-granting flow.
+ * Reached via the /api/wcif/** Hosting rewrite, so it's same-origin (no CORS).
  */
 export const wcif = onRequest(async (req, res) => {
   const competitionId = req.path.split("/").filter(Boolean).pop();
@@ -149,8 +151,16 @@ export const wcif = onRequest(async (req, res) => {
   }
   try {
     const slim = await fetchPublicWcif(decodeURIComponent(competitionId));
+    const body = JSON.stringify(slim);
     res.set("Cache-Control", "public, max-age=300, s-maxage=300");
-    res.json(slim);
+    res.set("Content-Type", "application/json; charset=utf-8");
+    res.set("Vary", "Accept-Encoding");
+    if ((req.headers["accept-encoding"] ?? "").includes("gzip")) {
+      res.set("Content-Encoding", "gzip");
+      res.end(gzipSync(body));
+    } else {
+      res.end(body);
+    }
   } catch {
     res.status(502).json({ error: `Failed to load competition "${competitionId}"` });
   }
