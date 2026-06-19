@@ -17,7 +17,7 @@ export interface StaffAssignment {
 }
 
 /** A staff assignment code is any code in the "staff-*" namespace. */
-function isStaffCode(code: string): boolean {
+export function isStaffCode(code: string): boolean {
   return code.startsWith("staff");
 }
 

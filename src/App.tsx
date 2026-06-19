@@ -6,6 +6,7 @@ const Login = lazy(() => import("./routes/Login"));
 const AuthCallback = lazy(() => import("./routes/AuthCallback"));
 const StageView = lazy(() => import("./routes/StageView"));
 const ShameDashboard = lazy(() => import("./routes/ShameDashboard"));
+const ReimbursementExport = lazy(() => import("./routes/ReimbursementExport"));
 
 export default function App() {
   return (
@@ -16,6 +17,7 @@ export default function App() {
         <Route path="/c/:competitionId" element={<AppShell />}>
           <Route index element={<StageView />} />
           <Route path="shame" element={<ShameDashboard />} />
+          <Route path="reimbursement" element={<ReimbursementExport />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

@@ -27,7 +27,7 @@ export interface AbsenceCount {
 }
 
 /** Optional scope for the dashboard selectors: a single stage and/or a single day. */
-interface Scope {
+export interface Scope {
   /** Restrict to one stage (room id); omit/null for the whole competition. */
   roomId?: number | null;
   /** Restrict to one calendar day (YYYY-MM-DD); omit/null for every day. */
@@ -40,7 +40,7 @@ interface Scope {
  * groups only — counting groups that haven't happened yet would drown every
  * rate in a huge denominator (e.g. 0/54 at the start of the comp).
  */
-function startedActivityIds(wcif: Wcif, now: Date, scope: Scope = {}): Set<number> {
+export function startedActivityIds(wcif: Wcif, now: Date, scope: Scope = {}): Set<number> {
   const started = new Set<number>();
   const nowMs = now.getTime();
   for (const stage of listStages(wcif)) {

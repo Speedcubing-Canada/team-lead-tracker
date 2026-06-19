@@ -1,11 +1,24 @@
 import { describe, expect, it } from "vitest";
-import { mergeMyCompetitions, partitionByOngoing, type RawCompetition } from "./competitions";
+import {
+  mergeMyCompetitions,
+  partitionByOngoing,
+  recentPastCompetitions,
+  type RawCompetition,
+} from "./competitions";
 
 const comp = (id: string, start: string, end = start): RawCompetition => ({
   id,
   name: `Comp ${id}`,
   start_date: start,
   end_date: end,
+});
+
+const pastComp = (id: string, start: string, end = start) => ({
+  id,
+  name: `Comp ${id}`,
+  startDate: start,
+  endDate: end,
+  ongoing: false,
 });
 
 describe("mergeMyCompetitions", () => {
@@ -26,6 +39,53 @@ describe("mergeMyCompetitions", () => {
 
   it("returns an empty list when there are no competitions", () => {
     expect(mergeMyCompetitions([], [])).toEqual([]);
+  });
+
+  it("appends recent past competitions after upcoming, marked not ongoing", () => {
+    const result = mergeMyCompetitions(
+      [comp("Live", "2026-06-13")],
+      [comp("Soon", "2026-07-01")],
+      [pastComp("Done", "2026-06-01", "2026-06-02")],
+    );
+    expect(result.map((c) => c.id)).toEqual(["Live", "Soon", "Done"]);
+    expect(result.find((c) => c.id === "Done")).toMatchObject({ ongoing: false });
+  });
+
+  it("does not duplicate a comp that appears in both future and past lists", () => {
+    const result = mergeMyCompetitions(
+      [],
+      [comp("WC2026", "2026-07-01")],
+      [pastComp("WC2026", "2026-07-01")],
+    );
+    expect(result).toHaveLength(1);
+  });
+});
+
+describe("recentPastCompetitions", () => {
+  const today = "2026-06-18";
+
+  it("keeps comps that ended within the window and drops older ones", () => {
+    const past = [
+      comp("Recent", "2026-06-01", "2026-06-02"), // 16 days ago
+      comp("Old", "2026-01-01", "2026-01-02"), // far outside
+    ];
+    const result = recentPastCompetitions(past, today, 45);
+    expect(result.map((c) => c.id)).toEqual(["Recent"]);
+    expect(result[0]).toMatchObject({ ongoing: false });
+  });
+
+  it("sorts most-recently-ended first", () => {
+    const past = [
+      comp("Older", "2026-05-20", "2026-05-21"),
+      comp("Newer", "2026-06-10", "2026-06-11"),
+    ];
+    expect(recentPastCompetitions(past, today, 45).map((c) => c.id)).toEqual(["Newer", "Older"]);
+  });
+
+  it("honours a custom window length", () => {
+    const past = [comp("TwoWeeks", "2026-06-03", "2026-06-04")];
+    expect(recentPastCompetitions(past, today, 7)).toEqual([]);
+    expect(recentPastCompetitions(past, today, 30).map((c) => c.id)).toEqual(["TwoWeeks"]);
   });
 });
 

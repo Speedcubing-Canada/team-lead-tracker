@@ -4,6 +4,7 @@ import type { AccessWcif } from "./access.js";
 import {
   mergeMyCompetitions,
   partitionByOngoing,
+  recentPastCompetitions,
   type MyCompetition,
   type RawCompetition,
 } from "./competitions.js";
@@ -55,9 +56,11 @@ export async function fetchWcaIdentity(accessToken: string): Promise<WcaIdentity
 /**
  * Competitions the user is involved in — organizing, delegating, OR registered
  * for — via /competitions/mine (whose `future_competitions` covers not-yet-over
- * comps and, unlike /me, includes delegated/organized ones). Works with the
- * `public` scope. Best-effort: returns [] on failure so a transient error never
- * blocks login (manual entry remains available).
+ * comps and `past_competitions` the finished ones; unlike /me, both include
+ * delegated/organized comps). Works with the `public` scope. Past comps are
+ * capped to the recent window (so a lead can still export reimbursement for a
+ * just-finished comp without dragging their whole history along). Best-effort:
+ * returns [] on failure so a transient error never blocks login.
  */
 export async function fetchMyCompetitions(accessToken: string): Promise<MyCompetition[]> {
   try {
@@ -65,10 +68,14 @@ export async function fetchMyCompetitions(accessToken: string): Promise<MyCompet
       headers: { Authorization: `Bearer ${accessToken}` },
     });
     if (!res.ok) return [];
-    const data = (await res.json()) as { future_competitions?: RawCompetition[] };
+    const data = (await res.json()) as {
+      future_competitions?: RawCompetition[];
+      past_competitions?: RawCompetition[];
+    };
     const today = new Date().toISOString().slice(0, 10);
     const { ongoing, upcoming } = partitionByOngoing(data.future_competitions ?? [], today);
-    return mergeMyCompetitions(ongoing, upcoming);
+    const past = recentPastCompetitions(data.past_competitions ?? [], today);
+    return mergeMyCompetitions(ongoing, upcoming, past);
   } catch {
     return [];
   }

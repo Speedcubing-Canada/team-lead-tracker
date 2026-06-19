@@ -41,10 +41,40 @@ function byStartDate(a: MyCompetition, b: MyCompetition): number {
   return a.startDate.localeCompare(b.startDate);
 }
 
-/** Ongoing competitions first, then upcoming; each group sorted by start date, deduped by id. */
+/** A YYYY-MM-DD date `days` before `today`. */
+function isoDaysBefore(today: string, days: number): string {
+  const d = new Date(`${today}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() - days);
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * Past competitions that ended within the last `days` (default 45), most-recent
+ * first. The WCA past list can span a competitor's whole history, so we cap it
+ * server-side to keep the payload small; the client applies its own (shorter)
+ * window on top.
+ */
+export function recentPastCompetitions(
+  past: RawCompetition[],
+  today: string,
+  days = 45,
+): MyCompetition[] {
+  const cutoff = isoDaysBefore(today, days);
+  return past
+    .filter((c) => c.end_date >= cutoff && c.end_date < today)
+    .map((c) => normalize(c, false))
+    .sort((a, b) => b.endDate.localeCompare(a.endDate));
+}
+
+/**
+ * Ongoing competitions first, then upcoming, then recently-ended past ones; the
+ * future groups sorted by start date, past by end date (most recent first),
+ * deduped by id across all three.
+ */
 export function mergeMyCompetitions(
   ongoing: RawCompetition[],
   upcoming: RawCompetition[],
+  past: MyCompetition[] = [],
 ): MyCompetition[] {
   const seen = new Set<string>();
   const ongoingNorm: MyCompetition[] = [];
@@ -59,5 +89,11 @@ export function mergeMyCompetitions(
     seen.add(c.id);
     upcomingNorm.push(normalize(c, false));
   }
-  return [...ongoingNorm.sort(byStartDate), ...upcomingNorm.sort(byStartDate)];
+  const pastNorm: MyCompetition[] = [];
+  for (const c of past) {
+    if (seen.has(c.id)) continue;
+    seen.add(c.id);
+    pastNorm.push(c);
+  }
+  return [...ongoingNorm.sort(byStartDate), ...upcomingNorm.sort(byStartDate), ...pastNorm];
 }
