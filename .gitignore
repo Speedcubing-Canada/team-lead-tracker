@@ -29,3 +29,6 @@ functions/node_modules
 .DS_Store
 
 team-lead-tracker-firebase-adminsdk-fbsvc-fc96a4b604.json
+
+# graphify (regenerable knowledge-graph artifacts)
+graphify-out/
