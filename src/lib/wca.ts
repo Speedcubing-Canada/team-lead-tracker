@@ -110,19 +110,31 @@ export function buildWcaAuthorizeUrl(state: string): string {
   return `${WCA_ORIGIN}/oauth/authorize?${params.toString()}`;
 }
 
+function wcaWcifUrl(competitionId: string): string {
+  return `${WCA_ORIGIN}/api/v0/competitions/${encodeURIComponent(competitionId)}/wcif/public`;
+}
+
 /**
  * Fetch the public WCIF (unauthenticated; assignments and roles are public).
  *
- * In production we hit our same-origin `/api/wcif/:id` proxy, which returns a
+ * In production we prefer our same-origin `/api/wcif/:id` proxy, which returns a
  * slimmed WCIF that Firebase Hosting gzips and CDN-caches (~45× smaller than
- * WCA's uncompressed payload). In dev there's no Hosting rewrite, so we go
- * straight to WCA.
+ * WCA's uncompressed payload). If the proxy is unavailable (e.g. the Cloud
+ * Function didn't deploy) we fall back to fetching WCA directly so the app
+ * keeps working — just without the speed-up. In dev there's no Hosting rewrite,
+ * so we always go straight to WCA.
  */
 export async function fetchPublicWcif(competitionId: string, signal?: AbortSignal): Promise<Wcif> {
-  const url = import.meta.env?.DEV
-    ? `${WCA_ORIGIN}/api/v0/competitions/${encodeURIComponent(competitionId)}/wcif/public`
-    : `/api/wcif/${encodeURIComponent(competitionId)}`;
-  const res = await fetch(url, { signal });
+  if (!import.meta.env?.DEV) {
+    try {
+      const res = await fetch(`/api/wcif/${encodeURIComponent(competitionId)}`, { signal });
+      if (res.ok) return (await res.json()) as Wcif;
+    } catch (err) {
+      if (signal?.aborted) throw err;
+      // proxy unreachable — fall through to WCA
+    }
+  }
+  const res = await fetch(wcaWcifUrl(competitionId), { signal });
   if (!res.ok) {
     throw new Error(`Failed to load competition "${competitionId}" (${res.status})`);
   }
