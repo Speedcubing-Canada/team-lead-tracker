@@ -14,10 +14,11 @@
 import { initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
-import { HttpsError, onCall } from "firebase-functions/v2/https";
+import { HttpsError, onCall, onRequest } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
 import { canAccessCompetition, isPrivileged } from "./access.js";
 import type { MyCompetition } from "./competitions.js";
+import type { SlimWcif } from "./wcif.js";
 import {
   exchangeCodeForToken,
   fetchMyCompetitions,
@@ -70,7 +71,12 @@ export const authWithWca = onCall(
 export const grantCompetitionAccess = onCall(
   async (
     request,
-  ): Promise<{ ok: true; competitionName: string | null; privileged: boolean }> => {
+  ): Promise<{
+    ok: true;
+    competitionName: string | null;
+    privileged: boolean;
+    wcif: SlimWcif;
+  }> => {
     if (!request.auth) {
       throw new HttpsError("unauthenticated", "Sign in first");
     }
@@ -122,6 +128,30 @@ export const grantCompetitionAccess = onCall(
       updatedAt: FieldValue.serverTimestamp(),
     });
 
-    return { ok: true, competitionName: wcif.name ?? null, privileged };
+    // Return the (already-fetched, slimmed) WCIF so the client can seed its
+    // TanStack cache and skip a redundant multi-MB download on navigation.
+    return { ok: true, competitionName: wcif.name ?? null, privileged, wcif };
   },
 );
+
+/**
+ * Public WCIF proxy. Fetches the WCA WCIF, slims it to the fields the client
+ * uses, and returns it with a cache header so Firebase Hosting's CDN gzips and
+ * edge-caches the (~45× smaller) response. Used for reloads and routes that
+ * don't go through the access-granting flow. Reached via the /api/wcif/**
+ * Hosting rewrite, so it's same-origin (no CORS).
+ */
+export const wcif = onRequest(async (req, res) => {
+  const competitionId = req.path.split("/").filter(Boolean).pop();
+  if (!competitionId) {
+    res.status(400).json({ error: "Missing competition id" });
+    return;
+  }
+  try {
+    const slim = await fetchPublicWcif(decodeURIComponent(competitionId));
+    res.set("Cache-Control", "public, max-age=300, s-maxage=300");
+    res.json(slim);
+  } catch {
+    res.status(502).json({ error: `Failed to load competition "${competitionId}"` });
+  }
+});

@@ -110,12 +110,19 @@ export function buildWcaAuthorizeUrl(state: string): string {
   return `${WCA_ORIGIN}/oauth/authorize?${params.toString()}`;
 }
 
-/** Fetch the public WCIF (unauthenticated; assignments and roles are public). */
+/**
+ * Fetch the public WCIF (unauthenticated; assignments and roles are public).
+ *
+ * In production we hit our same-origin `/api/wcif/:id` proxy, which returns a
+ * slimmed WCIF that Firebase Hosting gzips and CDN-caches (~45× smaller than
+ * WCA's uncompressed payload). In dev there's no Hosting rewrite, so we go
+ * straight to WCA.
+ */
 export async function fetchPublicWcif(competitionId: string, signal?: AbortSignal): Promise<Wcif> {
-  const res = await fetch(
-    `${WCA_ORIGIN}/api/v0/competitions/${encodeURIComponent(competitionId)}/wcif/public`,
-    { signal },
-  );
+  const url = import.meta.env?.DEV
+    ? `${WCA_ORIGIN}/api/v0/competitions/${encodeURIComponent(competitionId)}/wcif/public`
+    : `/api/wcif/${encodeURIComponent(competitionId)}`;
+  const res = await fetch(url, { signal });
   if (!res.ok) {
     throw new Error(`Failed to load competition "${competitionId}" (${res.status})`);
   }

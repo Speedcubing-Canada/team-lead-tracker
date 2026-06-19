@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../auth/AuthContext";
 import { auth } from "../lib/firebase";
 import { grantCompetitionAccess } from "../lib/authApi";
@@ -23,6 +24,7 @@ function formatRange(startDate: string, endDate: string): string {
 export default function Login() {
   const { user, loading, signIn, signOut } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [competitions] = useState(() => loadMyCompetitions());
   const upcoming = upcomingComps(competitions);
   const [manual, setManual] = useState(false);
@@ -56,7 +58,10 @@ export default function Login() {
     setPendingId(competitionId);
     setError(null);
     try {
-      await grantCompetitionAccess(competitionId);
+      const { wcif } = await grantCompetitionAccess(competitionId);
+      // Seed the cache with the WCIF the function already fetched, so StageView
+      // renders without re-downloading it (within the query's staleTime).
+      queryClient.setQueryData(["wcif", competitionId], wcif);
       // Pull the freshly-set comps/privilegedComps claims into the active ID
       // token so Storage rules (which read the token) authorize this session.
       await auth().currentUser?.getIdToken(true);

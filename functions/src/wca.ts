@@ -1,6 +1,6 @@
 /** Server-side WCA OAuth + API calls used by the auth functions. */
 
-import type { AccessWcif } from "./access.js";
+import { slimWcif, type SlimWcif } from "./wcif.js";
 import {
   mergeMyCompetitions,
   partitionByOngoing,
@@ -81,11 +81,15 @@ export async function fetchMyCompetitions(accessToken: string): Promise<MyCompet
   }
 }
 
-/** Public WCIF (only the fields the access check needs). */
-export async function fetchPublicWcif(competitionId: string): Promise<AccessWcif & { name?: string }> {
+/**
+ * Public WCIF, slimmed to the fields the web client uses. Drives both the
+ * access check (the slim shape is a superset of AccessWcif) and the WCIF the
+ * client renders, so we fetch and project it once.
+ */
+export async function fetchPublicWcif(competitionId: string): Promise<SlimWcif> {
   const res = await fetch(
     `${WCA_ORIGIN}/api/v0/competitions/${encodeURIComponent(competitionId)}/wcif/public`,
   );
   if (!res.ok) throw new Error(`Failed to load competition "${competitionId}" (${res.status})`);
-  return (await res.json()) as AccessWcif & { name?: string };
+  return slimWcif(await res.json());
 }

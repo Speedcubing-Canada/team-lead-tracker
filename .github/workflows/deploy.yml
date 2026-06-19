@@ -1,7 +1,8 @@
-name: Deploy hosting (prod)
+name: Deploy (prod)
 
-# Triggers a production hosting deploy when a release tag (v*) is pushed,
-# or manually from the Actions tab. Functions are deployed separately (npm run deploy:functions).
+# Triggers a production deploy of BOTH hosting and functions when a release tag
+# (v*) is pushed, or manually from the Actions tab. Keeping these together means a
+# release can never ship a frontend change whose functions-side logic stays behind.
 on:
   push:
     tags: ['v*']
@@ -25,3 +26,19 @@ jobs:
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           projectId: team-lead-tracker
           channelId: live           # deploy to the live channel, not a preview
+
+      # Deploy the Cloud Functions too. The hosting action only handles hosting, so
+      # without this any change under functions/ would silently miss the release.
+      - name: Install functions dependencies
+        run: npm ci --prefix functions
+      - name: Deploy functions
+        env:
+          # firebase-tools authenticates from this service-account key (same secret
+          # the hosting action uses). v15 honors FUNCTIONS_DISCOVERY_TIMEOUT to avoid
+          # discovery timeouts during source analysis.
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-sa.json
+          FUNCTIONS_DISCOVERY_TIMEOUT: 60
+        run: |
+          printf '%s' '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > "$GOOGLE_APPLICATION_CREDENTIALS"
+          npx firebase deploy --only functions --project team-lead-tracker --non-interactive
+          rm -f "$GOOGLE_APPLICATION_CREDENTIALS"
