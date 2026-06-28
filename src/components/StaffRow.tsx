@@ -22,6 +22,7 @@ export function StaffRow({ person, station, check, onStatus, onNote }: StaffRowP
   // Local note state, kept in sync with remote unless this lead is editing.
   const [note, setNote] = useState(check?.note ?? "");
   const editing = useRef(false);
+  const inputRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
     if (!editing.current) setNote(check?.note ?? "");
   }, [check?.note]);
@@ -34,7 +35,11 @@ export function StaffRow({ person, station, check, onStatus, onNote }: StaffRowP
 
   function commitNote() {
     editing.current = false;
-    if (note !== (check?.note ?? "")) onNote(note);
+    // Read the live input value rather than React state: tapping a button blurs
+    // the input, but a phone keyboard's final keystroke/autocorrect can reach the
+    // DOM after the matching setNote is scheduled, leaving `note` momentarily stale.
+    const value = inputRef.current?.value ?? note;
+    if (value !== (check?.note ?? "")) onNote(value);
   }
 
   return (
@@ -52,6 +57,7 @@ export function StaffRow({ person, station, check, onStatus, onNote }: StaffRowP
             label="Present"
             active={status === "present"}
             activeClass="border-green-600 bg-green-600 text-white"
+            onPointerDown={() => editing.current && commitNote()}
             onClick={() => onStatus(toggleStatus(status, "present"))}
           >
             ✓
@@ -60,6 +66,7 @@ export function StaffRow({ person, station, check, onStatus, onNote }: StaffRowP
             label="Absent"
             active={status === "absent"}
             activeClass="border-red-600 bg-red-600 text-white"
+            onPointerDown={() => editing.current && commitNote()}
             onClick={() => onStatus(toggleStatus(status, "absent"))}
           >
             ✕
@@ -77,6 +84,7 @@ export function StaffRow({ person, station, check, onStatus, onNote }: StaffRowP
 
       {showNote && (
         <input
+          ref={inputRef}
           value={note}
           onChange={(e) => setNote(e.target.value)}
           onFocus={() => (editing.current = true)}
@@ -94,12 +102,14 @@ function IconButton({
   active,
   activeClass,
   onClick,
+  onPointerDown,
   children,
 }: {
   label: string;
   active: boolean;
   activeClass: string;
   onClick: () => void;
+  onPointerDown?: () => void;
   children: React.ReactNode;
 }) {
   return (
@@ -107,6 +117,7 @@ function IconButton({
       type="button"
       aria-label={label}
       aria-pressed={active}
+      onPointerDown={onPointerDown}
       onClick={onClick}
       className={`flex h-11 w-11 items-center justify-center rounded-lg border text-base font-semibold ${
         active ? activeClass : "border-slate-300 bg-white text-slate-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-400"
