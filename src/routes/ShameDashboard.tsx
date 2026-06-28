@@ -13,6 +13,7 @@ import {
 import { listDays, listStages } from "../lib/wcif";
 import { loadSelection } from "../lib/selection";
 import { AbsenteeBoard } from "../components/AbsenteeBoard";
+import { DashboardSkeleton } from "../components/Skeleton";
 
 type Scope = "team" | "global";
 
@@ -68,7 +69,7 @@ export default function ShameDashboard() {
   }, [wcif, checks, scope, myRoomId, effectiveDay]);
 
   if (isLoading) {
-    return <p className="p-6 text-center text-sm text-slate-500 dark:text-slate-400">Loading…</p>;
+    return <DashboardSkeleton />;
   }
 
   const tab = (value: Scope, label: string) => (

@@ -70,6 +70,11 @@ themselves access (membership is written by the Admin SDK, which bypasses rules)
   not** a `VITE_` var and must never reach the browser.
 - Mobile-first: design for one-handed phone use — large tap targets (min ~48px), primary
   destinations in the bottom bar, respect `env(safe-area-inset-*)`.
+- **UI/visual conventions live in [`docs/design-guidelines.md`](docs/design-guidelines.md)** — read
+  it before adding or changing UI. In short: Montserrat is the app font (default `--font-sans`, don't
+  set `font-family` per component); use the four-step weight scale (400/500/600/700, 700 for the app
+  title only); icons come from **Lucide** (`lucide-react`) — never emoji or one-off SVGs; use the
+  shared `Tooltip` and `Skeleton` components; every color needs a `dark:` variant.
 
 ## Setup prerequisites (not committed)
 

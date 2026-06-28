@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { Wcif } from "../lib/wca";
 import {
   defaultGroupIndex,
@@ -13,6 +14,7 @@ import { checkDocId, type CheckRecord, type CheckStatus } from "../lib/checks";
 import { loadSelection, saveSelection } from "../lib/selection";
 import { StaffRow } from "./StaffRow";
 import { PersonNameButton } from "./PersonNameButton";
+import { Tooltip } from "./Tooltip";
 
 export interface StageBoardHandlers {
   onStatus: (
@@ -159,15 +161,17 @@ export function StageBoard({
         {current && (
           <>
             <div className="flex items-center gap-2">
-              <button
-                type="button"
-                aria-label="Previous group"
-                disabled={index === 0}
-                onClick={() => setGroupIndex(index - 1)}
-                className="flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-slate-300 bg-white text-lg disabled:opacity-40 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
-              >
-                ◀
-              </button>
+              <Tooltip label="Previous group" side="bottom" longPress={false}>
+                <button
+                  type="button"
+                  aria-label="Previous group"
+                  disabled={index === 0}
+                  onClick={() => setGroupIndex(index - 1)}
+                  className="flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-700 disabled:opacity-40 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+                >
+                  <ChevronLeft size={20} aria-hidden />
+                </button>
+              </Tooltip>
               <select
                 aria-label="Group"
                 className="min-h-11 min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 text-base dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
@@ -184,15 +188,17 @@ export function StageBoard({
                   </optgroup>
                 ))}
               </select>
-              <button
-                type="button"
-                aria-label="Next group"
-                disabled={index >= groups.length - 1}
-                onClick={() => setGroupIndex(index + 1)}
-                className="flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-slate-300 bg-white text-lg disabled:opacity-40 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
-              >
-                ▶
-              </button>
+              <Tooltip label="Next group" side="bottom" longPress={false}>
+                <button
+                  type="button"
+                  aria-label="Next group"
+                  disabled={index >= groups.length - 1}
+                  onClick={() => setGroupIndex(index + 1)}
+                  className="flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-700 disabled:opacity-40 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+                >
+                  <ChevronRight size={20} aria-hidden />
+                </button>
+              </Tooltip>
             </div>
             <p className="text-center text-xs text-slate-500 dark:text-slate-400">
               {dayLabel(current.date)} · {timeLabel(current.activity.startTime)} · Group{" "}
@@ -254,7 +260,7 @@ function StaffList({
                       {s.stationNumber != null && (
                         <span
                           aria-label={`Station ${s.stationNumber}`}
-                          className="flex h-7 min-w-7 shrink-0 items-center justify-center rounded-md bg-slate-200 px-1.5 text-sm font-bold tabular-nums text-slate-700 dark:bg-slate-700 dark:text-slate-200"
+                          className="flex h-7 min-w-7 shrink-0 items-center justify-center rounded-md bg-slate-200 px-1.5 text-sm font-semibold tabular-nums text-slate-700 dark:bg-slate-700 dark:text-slate-200"
                         >
                           {s.stationNumber}
                         </span>

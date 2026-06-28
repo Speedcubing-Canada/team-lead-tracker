@@ -5,6 +5,7 @@ import { useWcif } from "../lib/useWcif";
 import { useChecks } from "../lib/useChecks";
 import { writeNote, writeStatus } from "../lib/checks";
 import { StageBoard, type StageBoardHandlers } from "../components/StageBoard";
+import { StageBoardSkeleton } from "../components/Skeleton";
 
 /**
  * Stage view (landing): loads the competition's WCIF, subscribes to live checks,
@@ -31,7 +32,7 @@ export default function StageView() {
   );
 
   if (isLoading) {
-    return <p className="p-6 text-center text-sm text-slate-500 dark:text-slate-400">Loading competition…</p>;
+    return <StageBoardSkeleton />;
   }
   if (isError || !wcif) {
     return (

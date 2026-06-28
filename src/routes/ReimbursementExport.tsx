@@ -12,6 +12,7 @@ import {
   type Tier,
 } from "../lib/reimbursement";
 import { toCsv, toHtml, toMarkdown, triggerDownload, type ReportMeta } from "../lib/exportReport";
+import { ReimbursementSkeleton } from "../components/Skeleton";
 
 type Tone = "good" | "warn" | "bad";
 
@@ -68,7 +69,7 @@ export default function ReimbursementExport() {
   }, [wcif, tiers]);
 
   if (isLoading) {
-    return <p className="p-6 text-center text-sm text-slate-500 dark:text-slate-400">Loading…</p>;
+    return <ReimbursementSkeleton />;
   }
   if (!wcif || !meta) {
     return (
@@ -104,7 +105,7 @@ export default function ReimbursementExport() {
   return (
     <div className="flex flex-col gap-4 p-4">
       <header>
-        <h1 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+        <h1 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
           Reimbursement export
         </h1>
         <p className="text-xs text-slate-500 dark:text-slate-400">

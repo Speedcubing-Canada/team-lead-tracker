@@ -14,8 +14,10 @@
     "deploy:functions": "npm --prefix functions run build && FUNCTIONS_DISCOVERY_TIMEOUT=60 firebase deploy --only functions"
   },
   "dependencies": {
+    "@fontsource/montserrat": "^5.2.8",
     "@tanstack/react-query": "^5.59.16",
     "firebase": "^11.0.2",
+    "lucide-react": "^1.22.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.27.0"

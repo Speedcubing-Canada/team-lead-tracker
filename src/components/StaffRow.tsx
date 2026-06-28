@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
+import { Check, MessageSquare, X } from "lucide-react";
 import { toggleStatus, type CheckRecord, type CheckStatus } from "../lib/checks";
 import type { WcifPerson } from "../lib/wca";
 import { PersonNameButton } from "./PersonNameButton";
+import { Tooltip } from "./Tooltip";
 
 interface StaffRowProps {
   person: WcifPerson;
@@ -13,8 +15,8 @@ interface StaffRowProps {
 
 /**
  * A single staffer. The name gets the whole left column (names can be long) and
- * the controls are compact icon buttons on the right: present (✓), absent (✕),
- * and a note toggle (💬) that stays out of the way until tapped.
+ * the controls are compact icon buttons on the right: present (check), absent (x),
+ * and a note toggle (speech bubble) that stays out of the way until tapped.
  */
 export function StaffRow({ person, station, check, onStatus, onNote }: StaffRowProps) {
   const status = check?.status ?? null;
@@ -56,7 +58,7 @@ export function StaffRow({ person, station, check, onStatus, onNote }: StaffRowP
     if (value !== (check?.note ?? "")) onNote(value);
   }
 
-  // Tapping ✓/✕: if the lead was editing a note, fold it into the same write so a
+  // Tapping present/absent: if the lead was editing a note, fold it into the same write so a
   // newly created doc carries both status and note. Clearing a status (toggle to
   // null) deletes the doc, so no note rides along.
   function pressStatus(next: CheckStatus | null) {
@@ -74,7 +76,7 @@ export function StaffRow({ person, station, check, onStatus, onNote }: StaffRowP
         {station != null && (
           <span
             aria-label={`Station ${station}`}
-            className="flex h-7 min-w-7 shrink-0 items-center justify-center rounded-md bg-slate-200 px-1.5 text-sm font-bold tabular-nums text-slate-700 dark:bg-slate-700 dark:text-slate-200"
+            className="flex h-7 min-w-7 shrink-0 items-center justify-center rounded-md bg-slate-200 px-1.5 text-sm font-semibold tabular-nums text-slate-700 dark:bg-slate-700 dark:text-slate-200"
           >
             {station}
           </span>
@@ -93,7 +95,7 @@ export function StaffRow({ person, station, check, onStatus, onNote }: StaffRowP
             onPointerDown={() => (statusPress.current = editing.current)}
             onClick={() => pressStatus(toggleStatus(status, "present"))}
           >
-            ✓
+            <Check size={20} aria-hidden />
           </IconButton>
           <IconButton
             label="Absent"
@@ -102,15 +104,15 @@ export function StaffRow({ person, station, check, onStatus, onNote }: StaffRowP
             onPointerDown={() => (statusPress.current = editing.current)}
             onClick={() => pressStatus(toggleStatus(status, "absent"))}
           >
-            ✕
+            <X size={20} aria-hidden />
           </IconButton>
           <IconButton
-            label="Add note"
+            label={showNote ? "Hide note" : "Add note"}
             active={showNote || Boolean(note)}
             activeClass="border-slate-400 bg-white text-slate-700 dark:border-slate-500 dark:bg-slate-800 dark:text-slate-300"
             onClick={() => setShowNote((v) => !v)}
           >
-            💬
+            <MessageSquare size={18} aria-hidden />
           </IconButton>
         </span>
       </div>
@@ -146,17 +148,19 @@ function IconButton({
   children: React.ReactNode;
 }) {
   return (
-    <button
-      type="button"
-      aria-label={label}
-      aria-pressed={active}
-      onPointerDown={onPointerDown}
-      onClick={onClick}
-      className={`flex h-11 w-11 items-center justify-center rounded-lg border text-base font-semibold ${
-        active ? activeClass : "border-slate-300 bg-white text-slate-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-400"
-      }`}
-    >
-      {children}
-    </button>
+    <Tooltip label={label} longPress={false}>
+      <button
+        type="button"
+        aria-label={label}
+        aria-pressed={active}
+        onPointerDown={onPointerDown}
+        onClick={onClick}
+        className={`flex h-11 w-11 items-center justify-center rounded-lg border font-semibold ${
+          active ? activeClass : "border-slate-300 bg-white text-slate-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-400"
+        }`}
+      >
+        {children}
+      </button>
+    </Tooltip>
   );
 }

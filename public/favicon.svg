@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" role="img" aria-label="Team Lead Tracker">
+  <!-- App accent (indigo-600) tile with a white Lucide clipboard-check glyph, matching the in-app icon set. -->
+  <rect width="32" height="32" rx="7" fill="#4f46e5" />
+  <g transform="translate(6 6) scale(0.83333)" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+    <rect width="8" height="4" x="8" y="2" rx="1" ry="1" />
+    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+    <path d="m9 14 2 2 4-4" />
+  </g>
+</svg>

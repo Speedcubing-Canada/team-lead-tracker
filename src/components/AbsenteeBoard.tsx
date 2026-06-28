@@ -1,6 +1,8 @@
+import { PartyPopper } from "lucide-react";
 import type { AbsenceCount, AbsenteeSummary } from "../lib/absentees";
 import { BarChart } from "./BarChart";
 import { PersonNameButton } from "./PersonNameButton";
+import { Tooltip } from "./Tooltip";
 
 /** Presentational shame board: charts of who/where, then the per-person breakdown. */
 export function AbsenteeBoard({
@@ -20,13 +22,22 @@ export function AbsenteeBoard({
 
   // Per-stage comparison is meaningful even when nobody is absent (clean stages
   // show at 0%), so it renders in both the empty and populated states.
-  const stageChart = byStage.length > 0 && <BarChart title="Absences per stage" data={byStage} />;
+  const stageChart = byStage.length > 0 && (
+    <BarChart
+      title="Absences per stage"
+      data={byStage}
+      hint="Absence rate of each stage on the selected day, so you can see where yours ranks."
+    />
+  );
 
   if (absentees.length === 0) {
     return (
       <div className="flex flex-col gap-4 p-4">
         <div className="p-4 text-center">
-          <p className="text-base font-semibold text-slate-900 dark:text-slate-100">Everyone's on it 🎉</p>
+          <p className="flex items-center justify-center gap-2 text-base font-semibold text-slate-900 dark:text-slate-100">
+            <PartyPopper size={20} aria-hidden className="text-emerald-500" />
+            Everyone's on it
+          </p>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">No one is marked absent right now.</p>
         </div>
         {stageChart}
@@ -44,13 +55,25 @@ export function AbsenteeBoard({
             <span className="font-semibold text-red-600 dark:text-red-400 tabular-nums">
               {overallPct}%
             </span>{" "}
-            of marked duties unfilled
+            <Tooltip label="Share of duties marked present or absent that came up absent. Unmarked duties aren't counted.">
+              <span className="cursor-help underline decoration-dotted underline-offset-2">
+                of marked duties unfilled
+              </span>
+            </Tooltip>
           </span>
         )}
       </h2>
       {stageChart}
-      <BarChart title="Most forgotten" data={byPerson} />
-      <BarChart title="Absences per group" data={byGroup} />
+      <BarChart
+        title="Most forgotten"
+        data={byPerson}
+        hint="People with the highest share of missed duties among those marked for them."
+      />
+      <BarChart
+        title="Absences per group"
+        data={byGroup}
+        hint="Groups with the most unfilled duties, ranked by absence rate."
+      />
       <ul className="flex flex-col gap-3">
         {absentees.map(({ person, missed }) => (
           <li key={person.registrantId} className="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800">

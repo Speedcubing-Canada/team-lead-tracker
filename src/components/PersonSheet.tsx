@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Loader2, Trash2, Upload } from "lucide-react";
 import { wcaProfileUrl, type WcifPerson } from "../lib/wca";
 import type { PersonPhoto } from "../lib/photos";
 
@@ -140,11 +141,21 @@ export function PersonSheet({
         {canUpload && (
           <div className="mt-4 flex flex-col gap-2">
             <label
-              className={`flex min-h-12 w-full items-center justify-center rounded-xl bg-indigo-600 text-sm font-semibold text-white ${
+              className={`flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 text-sm font-semibold text-white ${
                 busy ? "opacity-60" : "cursor-pointer"
               }`}
             >
-              {busy ? "Working…" : photo ? "Replace photo" : "Upload photo"}
+              {busy ? (
+                <>
+                  <Loader2 size={16} aria-hidden className="motion-safe:animate-spin" />
+                  Working…
+                </>
+              ) : (
+                <>
+                  <Upload size={16} aria-hidden />
+                  {photo ? "Replace photo" : "Upload photo"}
+                </>
+              )}
               <input
                 type="file"
                 accept="image/*"
@@ -158,8 +169,9 @@ export function PersonSheet({
                 type="button"
                 onClick={handleRemove}
                 disabled={busy}
-                className="min-h-12 w-full rounded-xl bg-rose-50 text-sm font-semibold text-rose-600 disabled:opacity-60 dark:bg-rose-950 dark:text-rose-400"
+                className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-rose-50 text-sm font-semibold text-rose-600 disabled:opacity-60 dark:bg-rose-950 dark:text-rose-400"
               >
+                <Trash2 size={16} aria-hidden />
                 Remove photo
               </button>
             )}

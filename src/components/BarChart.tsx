@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
+import { Info } from "lucide-react";
 import type { AbsenceCount } from "../lib/absentees";
+import { Tooltip } from "./Tooltip";
 
 /** Severity color for a 0..1 rate: green (low) → amber → red (high), via hue. */
 function barGradient(rate: number): string {
@@ -19,7 +21,16 @@ function percent(rate: number): string {
  * zero on mount for a polished reveal (skipped under prefers-reduced-motion).
  * Mobile-friendly: labels truncate, the count/total + percentage sit to the right.
  */
-export function BarChart({ title, data }: { title: string; data: AbsenceCount[] }) {
+export function BarChart({
+  title,
+  data,
+  hint,
+}: {
+  title: string;
+  data: AbsenceCount[];
+  /** Optional plain-language explanation, surfaced via an info tooltip. */
+  hint?: string;
+}) {
   const [grown, setGrown] = useState(false);
   useEffect(() => {
     const id = requestAnimationFrame(() => setGrown(true));
@@ -28,7 +39,19 @@ export function BarChart({ title, data }: { title: string; data: AbsenceCount[] 
 
   return (
     <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800">
-      <h3 className="mb-3 text-sm font-semibold text-slate-900 dark:text-slate-100">{title}</h3>
+      <h3 className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-slate-900 dark:text-slate-100">
+        {title}
+        {hint && (
+          <Tooltip label={hint}>
+            <Info
+              size={14}
+              aria-label={`About: ${title}`}
+              role="img"
+              className="text-slate-400 dark:text-slate-500"
+            />
+          </Tooltip>
+        )}
+      </h3>
       {data.length === 0 ? (
         <p className="text-xs text-slate-400 dark:text-slate-500">Nothing to show yet.</p>
       ) : (
@@ -43,7 +66,7 @@ export function BarChart({ title, data }: { title: string; data: AbsenceCount[] 
                   <span className="text-[11px] text-slate-400 dark:text-slate-500">
                     {d.count}/{d.total}
                   </span>
-                  <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                  <span className="text-xs font-semibold text-slate-900 dark:text-slate-100">
                     {percent(d.rate)}
                   </span>
                 </span>

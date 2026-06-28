@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { Loader2 } from "lucide-react";
 import { signInWithCustomToken } from "firebase/auth";
 import { auth } from "../lib/firebase";
 import { authWithWca } from "../lib/authApi";
@@ -61,7 +62,13 @@ export default function AuthCallback() {
           </button>
         </>
       ) : (
-        <p className="text-sm text-slate-500 dark:text-slate-400">Signing you in…</p>
+        <p
+          role="status"
+          className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400"
+        >
+          <Loader2 size={18} aria-hidden className="motion-safe:animate-spin" />
+          Signing you in…
+        </p>
       )}
     </div>
   );

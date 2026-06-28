@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
+import { FileDown, Loader2, LogIn, LogOut } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
 import { auth } from "../lib/firebase";
 import { grantCompetitionAccess } from "../lib/authApi";
@@ -8,6 +9,7 @@ import { loadMyCompetitions } from "../lib/myCompetitions";
 import { hasCheckData, recentlyEndedComps, upcomingComps } from "../lib/recentComps";
 import type { MyCompetition } from "../lib/wca";
 import { ThemeToggle } from "../components/ThemeToggle";
+import { CompListSkeleton } from "../components/Skeleton";
 
 function formatRange(startDate: string, endDate: string): string {
   const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
@@ -49,7 +51,11 @@ export default function Login() {
   }, [user, competitions]);
 
   if (loading) {
-    return <p className="flex h-full items-center justify-center text-sm text-slate-500">Loading…</p>;
+    return (
+      <div className="h-full bg-slate-50 p-4 dark:bg-slate-900">
+        <CompListSkeleton />
+      </div>
+    );
   }
 
   async function open(id: string, subpath = "") {
@@ -92,8 +98,9 @@ export default function Login() {
         <button
           type="button"
           onClick={signIn}
-          className="min-h-12 w-full max-w-xs rounded-xl bg-indigo-600 px-4 font-semibold text-white"
+          className="flex min-h-12 w-full max-w-xs items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 font-semibold text-white"
         >
+          <LogIn size={18} aria-hidden />
           Log in with WCA
         </button>
       </div>
@@ -104,12 +111,17 @@ export default function Login() {
     <div className="flex h-full flex-col bg-slate-50 dark:bg-slate-900">
       <header className="flex items-center justify-between border-b border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800">
         <div>
-          <h1 className="text-lg font-bold text-slate-900 dark:text-slate-100">Your competitions</h1>
+          <h1 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Your competitions</h1>
           <p className="text-xs text-slate-500 dark:text-slate-400">Signed in as {user.name}</p>
         </div>
         <div className="flex items-center gap-3">
           <ThemeToggle />
-          <button type="button" onClick={signOut} className="text-sm text-slate-500 dark:text-slate-400">
+          <button
+            type="button"
+            onClick={signOut}
+            className="flex items-center gap-1.5 text-sm font-medium text-slate-500 dark:text-slate-400"
+          >
+            <LogOut size={16} aria-hidden />
             Sign out
           </button>
         </div>
@@ -139,7 +151,10 @@ export default function Login() {
                       Live
                     </span>
                   ) : pendingId === c.id ? (
-                    <span className="text-xs text-slate-400 dark:text-slate-500">Checking…</span>
+                    <span className="flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500">
+                      <Loader2 size={12} aria-hidden className="motion-safe:animate-spin" />
+                      Checking…
+                    </span>
                   ) : null}
                 </button>
               </li>
@@ -207,10 +222,14 @@ export default function Login() {
                       </span>
                     </span>
                     {pendingId === c.id ? (
-                      <span className="text-xs text-slate-400 dark:text-slate-500">Opening…</span>
+                      <span className="flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500">
+                        <Loader2 size={12} aria-hidden className="motion-safe:animate-spin" />
+                        Opening…
+                      </span>
                     ) : (
-                      <span className="text-xs font-medium text-indigo-600 dark:text-indigo-400">
-                        Export →
+                      <span className="flex items-center gap-1 text-xs font-medium text-indigo-600 dark:text-indigo-400">
+                        <FileDown size={14} aria-hidden />
+                        Export
                       </span>
                     )}
                   </button>

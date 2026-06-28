@@ -1,9 +1,11 @@
+import { Monitor, Moon, Sun, type LucideIcon } from "lucide-react";
 import { useTheme, type Theme } from "../lib/theme";
+import { Tooltip } from "./Tooltip";
 
-const OPTIONS: { value: Theme; label: string; icon: string }[] = [
-  { value: "system", label: "System theme", icon: "🖥️" },
-  { value: "light", label: "Light theme", icon: "☀️" },
-  { value: "dark", label: "Dark theme", icon: "🌙" },
+const OPTIONS: { value: Theme; label: string; Icon: LucideIcon }[] = [
+  { value: "system", label: "System theme", Icon: Monitor },
+  { value: "light", label: "Light theme", Icon: Sun },
+  { value: "dark", label: "Dark theme", Icon: Moon },
 ];
 
 /** Compact segmented control for choosing System / Light / Dark. */
@@ -19,22 +21,22 @@ export function ThemeToggle() {
       {OPTIONS.map((o) => {
         const active = theme === o.value;
         return (
-          <button
-            key={o.value}
-            type="button"
-            role="radio"
-            aria-checked={active}
-            aria-label={o.label}
-            title={o.label}
-            onClick={() => setTheme(o.value)}
-            className={`flex min-h-10 min-w-10 items-center justify-center rounded-md text-base ${
-              active
-                ? "bg-indigo-600 text-white"
-                : "text-slate-500 dark:text-slate-400"
-            }`}
-          >
-            <span aria-hidden="true">{o.icon}</span>
-          </button>
+          <Tooltip key={o.value} label={o.label} side="bottom" longPress={false}>
+            <button
+              type="button"
+              role="radio"
+              aria-checked={active}
+              aria-label={o.label}
+              onClick={() => setTheme(o.value)}
+              className={`flex min-h-10 min-w-10 items-center justify-center rounded-md ${
+                active
+                  ? "bg-indigo-600 text-white"
+                  : "text-slate-500 dark:text-slate-400"
+              }`}
+            >
+              <o.Icon size={18} aria-hidden />
+            </button>
+          </Tooltip>
         );
       })}
     </div>

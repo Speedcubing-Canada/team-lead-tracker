@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Navigate, NavLink, Outlet, useParams } from "react-router-dom";
+import { BarChart3, ChevronLeft, ClipboardList, Loader2, type LucideIcon } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
 import {
   fetchPrivileged,
@@ -48,7 +49,15 @@ export function AppShell() {
   );
 
   if (loading) {
-    return <p className="flex h-full items-center justify-center text-sm text-slate-500 dark:text-slate-400">Loading…</p>;
+    return (
+      <div
+        role="status"
+        aria-label="Loading"
+        className="flex h-full items-center justify-center text-slate-400 dark:text-slate-500"
+      >
+        <Loader2 size={28} aria-hidden className="motion-safe:animate-spin" />
+      </div>
+    );
   }
   if (!user) {
     return <Navigate to="/" replace />;
@@ -66,26 +75,37 @@ export function AppShell() {
           <Outlet />
         </main>
         <nav className="grid grid-cols-3 border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)] dark:border-slate-700 dark:bg-slate-800">
-          <TabLink to={base} end label="Stage" />
-          <TabLink to={`${base}/shame`} label="Dashboard" />
-          <TabLink to="/" end label="‹ Comps" />
+          <TabLink to={base} end label="Stage" Icon={ClipboardList} />
+          <TabLink to={`${base}/shame`} label="Dashboard" Icon={BarChart3} />
+          <TabLink to="/" end label="Comps" Icon={ChevronLeft} />
         </nav>
       </div>
     </PersonSheetProvider>
   );
 }
 
-function TabLink({ to, label, end }: { to: string; label: string; end?: boolean }) {
+function TabLink({
+  to,
+  label,
+  Icon,
+  end,
+}: {
+  to: string;
+  label: string;
+  Icon: LucideIcon;
+  end?: boolean;
+}) {
   return (
     <NavLink
       to={to}
       end={end}
       className={({ isActive }) =>
-        `flex min-h-14 items-center justify-center text-sm font-medium ${
+        `flex min-h-14 flex-col items-center justify-center gap-0.5 text-xs font-medium ${
           isActive ? "text-indigo-600 dark:text-indigo-400" : "text-slate-500 dark:text-slate-400"
         }`
       }
     >
+      <Icon size={20} aria-hidden />
       {label}
     </NavLink>
   );
