@@ -18,9 +18,9 @@ export default function StageView() {
 
   const handlers = useMemo<StageBoardHandlers>(
     () => ({
-      onStatus: (activityId, registrantId, status) => {
+      onStatus: (activityId, registrantId, status, note) => {
         if (!competitionId || !user) return;
-        void writeStatus(competitionId, activityId, registrantId, status, user);
+        void writeStatus(competitionId, activityId, registrantId, status, user, note);
       },
       onNote: (activityId, registrantId, note) => {
         if (!competitionId || !user) return;

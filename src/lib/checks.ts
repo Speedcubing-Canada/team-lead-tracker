@@ -57,13 +57,19 @@ export function subscribeToChecks(
   });
 }
 
-/** Set (or clear) a staffer's present/absent status for a group. */
+/**
+ * Set (or clear) a staffer's present/absent status for a group. An optional note
+ * is written in the same operation so a freshly created doc carries both — a
+ * status-less check would be rejected by the security rules. Omit `note` to leave
+ * any existing note untouched.
+ */
 export async function writeStatus(
   competitionId: string,
   activityId: number,
   registrantId: number,
   status: CheckStatus | null,
   user: AuthUser,
+  note?: string,
 ): Promise<void> {
   const ref = checkRef(competitionId, activityId, registrantId);
   if (status === null) {
@@ -74,6 +80,7 @@ export async function writeStatus(
     ref,
     {
       status,
+      ...(note !== undefined ? { note } : {}),
       updatedByName: user.name,
       updatedByWcaId: user.wcaUserId,
       updatedAt: serverTimestamp(),

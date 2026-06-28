@@ -15,7 +15,12 @@ import { StaffRow } from "./StaffRow";
 import { PersonNameButton } from "./PersonNameButton";
 
 export interface StageBoardHandlers {
-  onStatus: (activityId: number, registrantId: number, status: CheckStatus | null) => void;
+  onStatus: (
+    activityId: number,
+    registrantId: number,
+    status: CheckStatus | null,
+    note?: string,
+  ) => void;
   onNote: (activityId: number, registrantId: number, note: string) => void;
 }
 
@@ -244,12 +249,17 @@ function StaffList({
                   return (
                     <li
                       key={`${s.person.wcaUserId}-${assignmentCode}`}
-                      className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-900 dark:bg-slate-900 dark:text-slate-100"
+                      className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-900 dark:bg-slate-900 dark:text-slate-100"
                     >
-                      <PersonNameButton person={s.person} />
                       {s.stationNumber != null && (
-                        <span className="ml-2 text-xs text-slate-500 dark:text-slate-400">Station {s.stationNumber}</span>
+                        <span
+                          aria-label={`Station ${s.stationNumber}`}
+                          className="flex h-7 min-w-7 shrink-0 items-center justify-center rounded-md bg-slate-200 px-1.5 text-sm font-bold tabular-nums text-slate-700 dark:bg-slate-700 dark:text-slate-200"
+                        >
+                          {s.stationNumber}
+                        </span>
                       )}
+                      <PersonNameButton person={s.person} />
                     </li>
                   );
                 }
@@ -259,7 +269,7 @@ function StaffList({
                     person={s.person}
                     station={s.stationNumber}
                     check={checks.get(checkDocId(groupId, registrantId))}
-                    onStatus={(status) => handlers.onStatus(groupId, registrantId, status)}
+                    onStatus={(status, note) => handlers.onStatus(groupId, registrantId, status, note)}
                     onNote={(note) => handlers.onNote(groupId, registrantId, note)}
                   />
                 );

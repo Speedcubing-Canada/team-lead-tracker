@@ -73,11 +73,13 @@ describe("StageBoard", () => {
     const alice = row("Alice Anderson");
     expect(within(alice).getByLabelText("Present")).toHaveAttribute("aria-pressed", "true");
 
+    // Marking without an in-progress note passes no note (4th arg undefined), so
+    // any existing note is left untouched.
     fireEvent.click(within(row("Bob Brown")).getByLabelText("Absent"));
-    expect(onStatus).toHaveBeenCalledWith(101, 2, "absent");
+    expect(onStatus).toHaveBeenCalledWith(101, 2, "absent", undefined);
 
     fireEvent.click(within(alice).getByLabelText("Present"));
-    expect(onStatus).toHaveBeenCalledWith(101, 1, null);
+    expect(onStatus).toHaveBeenCalledWith(101, 1, null, undefined);
   });
 
   it("hides the note input until the note button is tapped", () => {

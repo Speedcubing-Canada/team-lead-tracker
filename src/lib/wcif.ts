@@ -176,16 +176,33 @@ export function staffForGroup(wcif: Wcif, activityId: number): StaffAssignment[]
   return result;
 }
 
-/** A group's staff sharing one duty (e.g. all judges), people sorted by name. */
+/** A group's staff sharing one duty (e.g. all judges), sorted by station then name. */
 export interface DutyGroup {
   assignmentCode: string;
   staff: StaffAssignment[];
 }
 
 /**
+ * Order staff by station number (ascending, numerically) so a lead can walk the
+ * stage station-by-station, with unstationed staff last and name as a tiebreak.
+ * Comps that assign no stations have every station null, so this degrades to the
+ * plain alphabetical order.
+ */
+function byStationThenName(a: StaffAssignment, b: StaffAssignment): number {
+  const sa = a.stationNumber;
+  const sb = b.stationNumber;
+  if (sa !== sb) {
+    if (sa == null) return 1; // unstationed staff go last
+    if (sb == null) return -1;
+    return sa - sb; // numeric, so 2 sorts before 10
+  }
+  return a.person.name.localeCompare(b.person.name);
+}
+
+/**
  * Staff for a group, grouped by duty (judges together, scramblers together, …)
- * in duty order, with people sorted by name within each. Lets a delegate scan
- * one duty at a time instead of a mixed list.
+ * in duty order, with people sorted by station (then name) within each. Lets a
+ * delegate scan one duty at a time, station-by-station, instead of a mixed list.
  */
 export function staffByDuty(wcif: Wcif, activityId: number): DutyGroup[] {
   const byCode = new Map<string, StaffAssignment[]>();
@@ -198,7 +215,7 @@ export function staffByDuty(wcif: Wcif, activityId: number): DutyGroup[] {
   return [...byCode.entries()]
     .map(([assignmentCode, staff]) => ({
       assignmentCode,
-      staff: staff.sort((a, b) => a.person.name.localeCompare(b.person.name)),
+      staff: staff.sort(byStationThenName),
     }))
     .sort(
       (a, b) =>
