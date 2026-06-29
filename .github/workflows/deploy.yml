@@ -23,7 +23,12 @@ jobs:
 
       # Authenticate the firebase CLI for both deploys below. This writes a valid
       # credentials file from the service-account secret and exports
-      # GOOGLE_APPLICATION_CREDENTIALS to subsequent steps, which firebase-tools reads.
+      # GOOGLE_APPLICATION_CREDENTIALS to subsequent steps.
+      #
+      # The deploys below pin firebase-tools@15.22.3 via npx rather than using the repo's
+      # local 15.20.0: that older build does not honor GOOGLE_APPLICATION_CREDENTIALS and
+      # fails with "Failed to authenticate, have you run firebase login?". 15.22.3 is the
+      # version the previous (working) hosting action used.
       - uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
@@ -36,7 +41,7 @@ jobs:
       - name: Deploy hosting
         run: |
           set +e
-          out=$(npx firebase deploy --only hosting --project team-lead-tracker --non-interactive 2>&1)
+          out=$(npx firebase-tools@15.22.3 deploy --only hosting --project team-lead-tracker --non-interactive 2>&1)
           code=$?
           printf '%s\n' "$out"
           if [ $code -ne 0 ]; then
@@ -53,4 +58,4 @@ jobs:
           FUNCTIONS_DISCOVERY_TIMEOUT: 60
         run: |
           npm ci --prefix functions
-          npx firebase deploy --only functions --project team-lead-tracker --non-interactive
+          npx firebase-tools@15.22.3 deploy --only functions --project team-lead-tracker --non-interactive
