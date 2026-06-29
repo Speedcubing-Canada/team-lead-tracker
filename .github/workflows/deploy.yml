@@ -20,25 +20,43 @@ jobs:
       - run: npm ci
       - run: npm run test
       - run: npm run build          # reads committed .env.production (no build secrets needed)
-      - uses: FirebaseExtended/action-hosting-deploy@v0.10.0
-        with:
-          repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          projectId: team-lead-tracker
-          channelId: live           # deploy to the live channel, not a preview
 
-      # Deploy the Cloud Functions too. The hosting action only handles hosting, so
-      # without this any change under functions/ would silently miss the release.
-      - name: Install functions dependencies
-        run: npm ci --prefix functions
+      # Write the service-account key once; both the hosting and functions deploys
+      # below authenticate from it via GOOGLE_APPLICATION_CREDENTIALS (this is the same
+      # secret the old action-hosting-deploy step consumed as firebaseServiceAccount).
+      - name: Write service-account key
+        run: printf '%s' '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > "${{ runner.temp }}/firebase-sa.json"
+
+      # Deploy hosting via the CLI. Firebase content-addresses hosting versions, so when a
+      # release ships content byte-identical to what is already live (e.g. it was deployed
+      # manually before the tag was pushed) the upload resolves to the same version id and
+      # the release API rejects it with 400 "is the current active version". That is a
+      # benign no-op — swallow exactly that error, and still fail on any real one.
+      - name: Deploy hosting
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-sa.json
+        run: |
+          set +e
+          out=$(npx firebase deploy --only hosting --project team-lead-tracker --non-interactive 2>&1)
+          code=$?
+          printf '%s\n' "$out"
+          if [ $code -ne 0 ]; then
+            printf '%s\n' "$out" | grep -q "is the current active version" \
+              && { echo "::notice::Hosting already up to date — nothing to release."; exit 0; }
+            exit $code
+          fi
+
+      # Deploy the Cloud Functions too — independently of the hosting step above, so a
+      # change under functions/ can never silently miss the release. v15 honors
+      # FUNCTIONS_DISCOVERY_TIMEOUT to avoid discovery timeouts during source analysis.
       - name: Deploy functions
         env:
-          # firebase-tools authenticates from this service-account key (same secret
-          # the hosting action uses). v15 honors FUNCTIONS_DISCOVERY_TIMEOUT to avoid
-          # discovery timeouts during source analysis.
           GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-sa.json
           FUNCTIONS_DISCOVERY_TIMEOUT: 60
         run: |
-          printf '%s' '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > "$GOOGLE_APPLICATION_CREDENTIALS"
+          npm ci --prefix functions
           npx firebase deploy --only functions --project team-lead-tracker --non-interactive
-          rm -f "$GOOGLE_APPLICATION_CREDENTIALS"
+
+      - name: Clean up service-account key
+        if: always()
+        run: rm -f "${{ runner.temp }}/firebase-sa.json"
