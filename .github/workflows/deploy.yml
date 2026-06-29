@@ -21,11 +21,12 @@ jobs:
       - run: npm run test
       - run: npm run build          # reads committed .env.production (no build secrets needed)
 
-      # Write the service-account key once; both the hosting and functions deploys
-      # below authenticate from it via GOOGLE_APPLICATION_CREDENTIALS (this is the same
-      # secret the old action-hosting-deploy step consumed as firebaseServiceAccount).
-      - name: Write service-account key
-        run: printf '%s' '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > "${{ runner.temp }}/firebase-sa.json"
+      # Authenticate the firebase CLI for both deploys below. This writes a valid
+      # credentials file from the service-account secret and exports
+      # GOOGLE_APPLICATION_CREDENTIALS to subsequent steps, which firebase-tools reads.
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
 
       # Deploy hosting via the CLI. Firebase content-addresses hosting versions, so when a
       # release ships content byte-identical to what is already live (e.g. it was deployed
@@ -33,8 +34,6 @@ jobs:
       # the release API rejects it with 400 "is the current active version". That is a
       # benign no-op — swallow exactly that error, and still fail on any real one.
       - name: Deploy hosting
-        env:
-          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-sa.json
         run: |
           set +e
           out=$(npx firebase deploy --only hosting --project team-lead-tracker --non-interactive 2>&1)
@@ -51,12 +50,7 @@ jobs:
       # FUNCTIONS_DISCOVERY_TIMEOUT to avoid discovery timeouts during source analysis.
       - name: Deploy functions
         env:
-          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-sa.json
           FUNCTIONS_DISCOVERY_TIMEOUT: 60
         run: |
           npm ci --prefix functions
           npx firebase deploy --only functions --project team-lead-tracker --non-interactive
-
-      - name: Clean up service-account key
-        if: always()
-        run: rm -f "${{ runner.temp }}/firebase-sa.json"
