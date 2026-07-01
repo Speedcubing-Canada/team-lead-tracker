@@ -35,9 +35,12 @@ function todayDate(): string {
 }
 
 /**
- * The stage + group to open on, computed once on mount: a saved selection from
- * *today* wins (so navigating away and back never resets it); otherwise the
- * lead's derived stage plus today's current/next group is auto-detected.
+ * The stage + group to open on, computed once on mount. A saved selection is
+ * honoured only *within the same day*: navigating away and back keeps the lead's
+ * exact stage + group. Once the day rolls over (or there's no saved selection)
+ * we re-derive the stage they're working now — their next upcoming day's stage —
+ * plus that day's current/next group; the mount effect then overwrites the stale
+ * localStorage entry with today's date.
  */
 function computeInitialSelection(
   wcif: Wcif,
@@ -46,21 +49,23 @@ function computeInitialSelection(
 ): { stageId: string | null; groupIndex: number } {
   const stages = listStages(wcif);
   const stored = competitionId ? loadSelection(competitionId) : null;
-  const storedStageExists = stored != null && stages.some((s) => s.id === stored.stageId);
+  const freshStored =
+    stored != null &&
+    stored.savedDate === todayDate() &&
+    stages.some((s) => s.id === stored.stageId);
 
-  const stageId = storedStageExists
-    ? stored!.stageId
-    : (wcaUserId != null ? defaultStageId(wcif, wcaUserId) : stages[0]?.id) ?? null;
-  if (stageId == null) return { stageId: null, groupIndex: 0 };
-
-  // Same-day saved group restores exactly; a stale (earlier-day) one is dropped
-  // so we re-detect today's group on the saved stage.
-  if (storedStageExists && stored!.savedDate === todayDate()) {
-    const idx = groupsForStage(wcif, stageId).findIndex(
+  if (freshStored) {
+    const idx = groupsForStage(wcif, stored!.stageId).findIndex(
       (g) => g.activity.id === stored!.groupActivityId,
     );
-    if (idx >= 0) return { stageId, groupIndex: idx };
+    return {
+      stageId: stored!.stageId,
+      groupIndex: idx >= 0 ? idx : defaultGroupIndex(wcif, stored!.stageId),
+    };
   }
+
+  const stageId = (wcaUserId != null ? defaultStageId(wcif, wcaUserId) : stages[0]?.id) ?? null;
+  if (stageId == null) return { stageId: null, groupIndex: 0 };
   return { stageId, groupIndex: defaultGroupIndex(wcif, stageId) };
 }
 

@@ -401,12 +401,15 @@ describe("defaultStageId", () => {
     };
 
     expect(deriveStageId(wcif, 1)).toBe("1"); // all-time: room A (2 vs 1)
+    // Before the comp starts, look ahead to the first day P staffs (day 1 → B),
+    // NOT the all-time favourite (A). This is the NAC2026 pre-comp case.
+    expect(defaultStageId(wcif, 1, new Date("2026-06-30T09:00:00Z"))).toBe("2");
     expect(defaultStageId(wcif, 1, new Date("2026-07-01T09:30:00Z"))).toBe("2"); // day 1 → B
     expect(defaultStageId(wcif, 1, new Date("2026-07-02T09:30:00Z"))).toBe("1"); // day 2 → A
   });
 
-  it("falls back to the all-time stage on a day the person isn't staffing", () => {
-    // Dave only staffs on day 1; querying day 2 yields his all-time stage (Blue).
+  it("uses the last day staffed once all the person's assignments are in the past", () => {
+    // Dave only staffs on day 1; querying after that yields day 1's stage (Blue).
     expect(defaultStageId(sampleWcif, 1004, new Date("2026-07-02T09:30:00Z"))).toBe("2");
   });
 });

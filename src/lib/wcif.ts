@@ -401,9 +401,34 @@ export function deriveStageId(wcif: Wcif, wcaUserId: number, onDate?: string): s
 }
 
 /**
- * The stage to land a lead on: the stage they're staffing *today* (so it lines
- * up with the day-aware group auto-detection), falling back to their all-time
- * derived stage, then the first stage of the competition. Null only when the
+ * The calendar day whose stage a lead should land on for `today`: the earliest
+ * day they staff that is still `>= today` (so before/at the comp they see their
+ * next working day, and each day rolls forward automatically), else — if all
+ * their staff assignments are in the past — the last day they staffed. Returns
+ * null when the person has no staff assignments at all. Competitor assignments
+ * are ignored, matching `deriveStageId`.
+ */
+export function relevantStaffDay(wcif: Wcif, wcaUserId: number, today: string): string | null {
+  const person = wcif.persons.find((p) => p.wcaUserId === wcaUserId);
+  if (!person) return null;
+
+  const days = new Set<string>();
+  for (const assignment of person.assignments) {
+    if (!isStaffCode(assignment.assignmentCode)) continue;
+    const activity = activityById(wcif, assignment.activityId);
+    if (activity) days.add(dateOf(activity.startTime));
+  }
+  if (days.size === 0) return null;
+
+  const sorted = [...days].sort();
+  return sorted.find((d) => d >= today) ?? sorted[sorted.length - 1];
+}
+
+/**
+ * The stage to land a lead on: the stage they're staffing on their most relevant
+ * day — today if they staff today, otherwise their next upcoming working day (so
+ * before the comp starts they see day 1's stage, not an all-time favourite),
+ * falling back to the first stage of the competition. Null only when the
  * competition has no stages.
  */
 export function defaultStageId(
@@ -412,9 +437,9 @@ export function defaultStageId(
   now: Date = new Date(),
 ): string | null {
   const today = dateOf(now.toISOString());
+  const day = relevantStaffDay(wcif, wcaUserId, today);
   return (
-    deriveStageId(wcif, wcaUserId, today) ??
-    deriveStageId(wcif, wcaUserId) ??
+    (day != null ? deriveStageId(wcif, wcaUserId, day) : null) ??
     listStages(wcif)[0]?.id ??
     null
   );

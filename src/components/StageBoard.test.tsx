@@ -2,6 +2,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { StageBoard } from "./StageBoard";
 import { checkDocId, type CheckRecord } from "../lib/checks";
+import { loadSelection, saveSelection } from "../lib/selection";
 import { sampleWcif } from "../test/fixtures/wcif";
 
 // Pin the clock to before the fixture's comp day so the "current group"
@@ -120,6 +121,21 @@ describe("StageBoard selection persistence", () => {
     expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent(
       "3x3x3 Cube, Round 1 · Group 2",
     );
+  });
+
+  it("ignores a stale (earlier-day) saved stage and re-derives for the new day", () => {
+    // Pretend yesterday the lead was parked on the Blue stage (group 201). Today
+    // (clock pinned to 2026-06-15) that selection is stale, so the board must
+    // re-derive Alice's own stage (Red = "1"), not restore Blue.
+    saveSelection("Comp1", { stageId: "2", groupActivityId: 201, savedDate: "2026-06-14" });
+
+    render(<StageBoard wcif={sampleWcif} wcaUserId={1001} competitionId="Comp1" />);
+
+    expect(screen.getByLabelText("Stage")).toHaveValue("1");
+    // The stale entry is overwritten with today's derived selection.
+    const saved = loadSelection("Comp1");
+    expect(saved?.stageId).toBe("1");
+    expect(saved?.savedDate).toBe("2026-06-15");
   });
 
   it("does not persist across a remount without a competitionId", () => {
