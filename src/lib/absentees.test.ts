@@ -49,15 +49,15 @@ describe("summarizeAbsentees", () => {
     );
   });
 
-  it("scopes the absentee list to a single stage when given a roomId", () => {
+  it("scopes the absentee list to a single stage when given a stageId", () => {
     const checks = new Map<string, CheckRecord>([
-      [checkDocId(101, 2), rec("absent")], // Bob, Red Stage (room 1)
-      [checkDocId(201, 4), rec("absent")], // Dave, Blue Stage (room 2)
+      [checkDocId(101, 2), rec("absent")], // Bob, Red Stage (stage "1")
+      [checkDocId(201, 4), rec("absent")], // Dave, Blue Stage (stage "2")
     ]);
-    expect(summarizeAbsentees(sampleWcif, checks, 1).map((r) => r.person.name)).toEqual([
+    expect(summarizeAbsentees(sampleWcif, checks, "1").map((r) => r.person.name)).toEqual([
       "Bob Brown",
     ]);
-    expect(summarizeAbsentees(sampleWcif, checks, 2).map((r) => r.person.name)).toEqual([
+    expect(summarizeAbsentees(sampleWcif, checks, "2").map((r) => r.person.name)).toEqual([
       "Dave Davis",
     ]);
   });
@@ -110,15 +110,15 @@ describe("absencesByPerson", () => {
     ]);
   });
 
-  it("scopes to a single stage (room) when given a roomId", () => {
+  it("scopes to a single stage when given a stageId", () => {
     const checks = new Map<string, CheckRecord>([
       [checkDocId(101, 2), rec("absent")], // Bob, Red Stage
       [checkDocId(201, 4), rec("absent")], // Dave, Blue Stage
     ]);
-    expect(absencesByPerson(sampleWcif, checks, AFTER_COMP, 1)).toMatchObject([
+    expect(absencesByPerson(sampleWcif, checks, AFTER_COMP, "1")).toMatchObject([
       { label: "Bob Brown", count: 1, total: 1, rate: 1 },
     ]);
-    expect(absencesByPerson(sampleWcif, checks, AFTER_COMP, 2)).toMatchObject([
+    expect(absencesByPerson(sampleWcif, checks, AFTER_COMP, "2")).toMatchObject([
       { label: "Dave Davis", count: 1, total: 1, rate: 1 },
     ]);
   });
@@ -164,14 +164,14 @@ describe("overallAbsenceRate", () => {
     expect(overallAbsenceRate(sampleWcif, checks, AFTER_COMP)).toEqual({ absent: 2, total: 3 });
   });
 
-  it("scopes the rate to one stage when given a roomId", () => {
+  it("scopes the rate to one stage when given a stageId", () => {
     const checks = new Map<string, CheckRecord>([
       [checkDocId(101, 1), rec("absent")], // Alice, Red Stage
       [checkDocId(101, 2), rec("present")], // Bob, Red Stage
       [checkDocId(201, 4), rec("absent")], // Dave, Blue Stage
     ]);
-    expect(overallAbsenceRate(sampleWcif, checks, AFTER_COMP, 1)).toEqual({ absent: 1, total: 2 });
-    expect(overallAbsenceRate(sampleWcif, checks, AFTER_COMP, 2)).toEqual({ absent: 1, total: 1 });
+    expect(overallAbsenceRate(sampleWcif, checks, AFTER_COMP, "1")).toEqual({ absent: 1, total: 2 });
+    expect(overallAbsenceRate(sampleWcif, checks, AFTER_COMP, "2")).toEqual({ absent: 1, total: 1 });
   });
 
   it("counts only started assignments, so the rate isn't diluted early in the comp", () => {

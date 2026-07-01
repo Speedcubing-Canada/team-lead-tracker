@@ -41,15 +41,15 @@ export default function ShameDashboard() {
   const [scope, setScope] = useState<Scope>("team");
   const [day, setDay] = useState<string | null>(null);
 
-  const myRoomId = useMemo(() => {
+  const myStageId = useMemo(() => {
     if (!wcif) return null;
-    const stored = competitionId ? loadSelection(competitionId)?.roomId : null;
+    const stored = competitionId ? loadSelection(competitionId)?.stageId : null;
     const stages = listStages(wcif);
     if (stored != null && stages.some((s) => s.id === stored)) return stored;
     return stages[0]?.id ?? null;
   }, [wcif, competitionId]);
 
-  const myStageName = wcif ? listStages(wcif).find((s) => s.id === myRoomId)?.name : undefined;
+  const myStageName = wcif ? listStages(wcif).find((s) => s.id === myStageId)?.name : undefined;
   const days = wcif ? listDays(wcif) : [];
   const effectiveDay = day ?? (wcif ? currentCompetitionDay(wcif) : null);
 
@@ -57,16 +57,16 @@ export default function ShameDashboard() {
     if (!wcif) {
       return { absentees: [], byPerson: [], byGroup: [], byStage: [], overall: { absent: 0, total: 0 } };
     }
-    const roomId = scope === "team" ? myRoomId : null;
+    const stageId = scope === "team" ? myStageId : null;
     return {
-      absentees: summarizeAbsentees(wcif, checks, roomId),
-      byPerson: absencesByPerson(wcif, checks, undefined, roomId),
-      byGroup: absencesByGroup(wcif, checks, undefined, roomId),
+      absentees: summarizeAbsentees(wcif, checks, stageId),
+      byPerson: absencesByPerson(wcif, checks, undefined, stageId),
+      byGroup: absencesByGroup(wcif, checks, undefined, stageId),
       byStage:
         scope === "global" && effectiveDay ? absencesByStage(wcif, checks, effectiveDay) : [],
-      overall: overallAbsenceRate(wcif, checks, undefined, roomId),
+      overall: overallAbsenceRate(wcif, checks, undefined, stageId),
     };
-  }, [wcif, checks, scope, myRoomId, effectiveDay]);
+  }, [wcif, checks, scope, myStageId, effectiveDay]);
 
   if (isLoading) {
     return <DashboardSkeleton />;

@@ -1,5 +1,5 @@
 import type { Wcif, WcifPerson } from "./wca";
-import { activityById, groupsForRoom, listDays, listStages, roomIdForActivity } from "./wcif";
+import { activityById, groupsForStage, listDays, listStages, stageIdForActivity } from "./wcif";
 import { parseCheckDocId, type CheckRecord } from "./checks";
 
 export interface MissedGroup {
@@ -28,8 +28,8 @@ export interface AbsenceCount {
 
 /** Optional scope for the dashboard selectors: a single stage and/or a single day. */
 export interface Scope {
-  /** Restrict to one stage (room id); omit/null for the whole competition. */
-  roomId?: number | null;
+  /** Restrict to one stage (stage id); omit/null for the whole competition. */
+  stageId?: string | null;
   /** Restrict to one calendar day (YYYY-MM-DD); omit/null for every day. */
   date?: string | null;
 }
@@ -44,8 +44,8 @@ export function startedActivityIds(wcif: Wcif, now: Date, scope: Scope = {}): Se
   const started = new Set<number>();
   const nowMs = now.getTime();
   for (const stage of listStages(wcif)) {
-    if (scope.roomId != null && stage.id !== scope.roomId) continue;
-    for (const group of groupsForRoom(wcif, stage.id)) {
+    if (scope.stageId != null && stage.id !== scope.stageId) continue;
+    for (const group of groupsForStage(wcif, stage.id)) {
       if (scope.date != null && group.date !== scope.date) continue;
       if (new Date(group.activity.startTime).getTime() <= nowMs) {
         started.add(group.activity.id);
@@ -81,7 +81,7 @@ function* markedChecks(
 export function summarizeAbsentees(
   wcif: Wcif,
   checks: Map<string, CheckRecord>,
-  roomId?: number | null,
+  stageId?: string | null,
 ): AbsenteeSummary[] {
   const byRegistrant = new Map<number, AbsenteeSummary>();
   const labels = groupLabels(wcif);
@@ -90,7 +90,7 @@ export function summarizeAbsentees(
     if (record.status !== "absent") continue;
     const parsed = parseCheckDocId(id);
     if (!parsed) continue;
-    if (roomId != null && roomIdForActivity(wcif, parsed.activityId) !== roomId) continue;
+    if (stageId != null && stageIdForActivity(wcif, parsed.activityId) !== stageId) continue;
 
     const person = wcif.persons.find((p) => p.registrantId === parsed.registrantId);
     if (!person) continue;
@@ -161,9 +161,9 @@ export function absencesByPerson(
   wcif: Wcif,
   checks: Map<string, CheckRecord>,
   now: Date = new Date(),
-  roomId?: number | null,
+  stageId?: string | null,
 ): AbsenceCount[] {
-  const started = startedActivityIds(wcif, now, { roomId });
+  const started = startedActivityIds(wcif, now, { stageId });
   const tally = new Map<number, { absent: number; total: number }>();
   for (const { registrantId, record } of markedChecks(wcif, checks, started)) {
     const t = tally.get(registrantId) ?? { absent: 0, total: 0 };
@@ -185,7 +185,7 @@ export function absencesByPerson(
 function groupLabels(wcif: Wcif): Map<number, string> {
   const map = new Map<number, string>();
   for (const stage of listStages(wcif)) {
-    for (const group of groupsForRoom(wcif, stage.id)) {
+    for (const group of groupsForStage(wcif, stage.id)) {
       map.set(group.activity.id, group.shortLabel);
     }
   }
@@ -201,9 +201,9 @@ export function absencesByGroup(
   wcif: Wcif,
   checks: Map<string, CheckRecord>,
   now: Date = new Date(),
-  roomId?: number | null,
+  stageId?: string | null,
 ): AbsenceCount[] {
-  const started = startedActivityIds(wcif, now, { roomId });
+  const started = startedActivityIds(wcif, now, { stageId });
   const labels = groupLabels(wcif);
   const tally = new Map<number, { absent: number; total: number }>();
   for (const { activityId, record } of markedChecks(wcif, checks, started)) {
@@ -234,9 +234,9 @@ export function overallAbsenceRate(
   wcif: Wcif,
   checks: Map<string, CheckRecord>,
   now: Date = new Date(),
-  roomId?: number | null,
+  stageId?: string | null,
 ): { absent: number; total: number } {
-  const started = startedActivityIds(wcif, now, { roomId });
+  const started = startedActivityIds(wcif, now, { stageId });
   let absent = 0;
   let total = 0;
   for (const { record } of markedChecks(wcif, checks, started)) {
@@ -260,18 +260,18 @@ export function absencesByStage(
 ): AbsenceCount[] {
   const started = startedActivityIds(wcif, now, { date });
   const names = new Map(listStages(wcif).map((s) => [s.id, s.name]));
-  const tally = new Map<number, { absent: number; total: number }>();
+  const tally = new Map<string, { absent: number; total: number }>();
   for (const { activityId, record } of markedChecks(wcif, checks, started)) {
-    const roomId = roomIdForActivity(wcif, activityId);
-    if (roomId == null) continue;
-    const t = tally.get(roomId) ?? { absent: 0, total: 0 };
+    const stageId = stageIdForActivity(wcif, activityId);
+    if (stageId == null) continue;
+    const t = tally.get(stageId) ?? { absent: 0, total: 0 };
     t.total += 1;
     if (record.status === "absent") t.absent += 1;
-    tally.set(roomId, t);
+    tally.set(stageId, t);
   }
 
-  const entries = [...tally.entries()].map(([roomId, t]) => ({
-    label: names.get(roomId) ?? "Unknown stage",
+  const entries = [...tally.entries()].map(([stageId, t]) => ({
+    label: names.get(stageId) ?? "Unknown stage",
     count: t.absent,
     total: t.total,
   }));
@@ -289,7 +289,7 @@ export function currentCompetitionDay(wcif: Wcif, now: Date = new Date()): strin
   const nowMs = now.getTime();
   const startedDates = new Set<string>();
   for (const stage of listStages(wcif)) {
-    for (const group of groupsForRoom(wcif, stage.id)) {
+    for (const group of groupsForStage(wcif, stage.id)) {
       if (new Date(group.activity.startTime).getTime() <= nowMs) startedDates.add(group.date);
     }
   }

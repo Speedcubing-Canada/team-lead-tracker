@@ -1,8 +1,18 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { StageBoard } from "./StageBoard";
 import { checkDocId, type CheckRecord } from "../lib/checks";
 import { sampleWcif } from "../test/fixtures/wcif";
+
+// Pin the clock to before the fixture's comp day so the "current group"
+// auto-detection is deterministic (no group "today" → the first group), instead
+// of depending on when the suite happens to run. Only Date is faked, so React
+// Testing Library's timers keep working.
+beforeAll(() => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-06-15T12:00:00Z"));
+});
+afterAll(() => vi.useRealTimers());
 
 function row(name: string): HTMLElement {
   return screen.getByText(name).closest("li")!;

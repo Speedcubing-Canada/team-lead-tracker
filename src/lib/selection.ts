@@ -6,7 +6,7 @@
  * can be re-detected against today's schedule.
  */
 export interface StoredSelection {
-  roomId: number;
+  stageId: string;
   groupActivityId: number;
   /** Calendar date (YYYY-MM-DD) this selection was saved. */
   savedDate: string;
@@ -21,8 +21,8 @@ export function loadSelection(competitionId: string): StoredSelection | null {
     const raw = localStorage.getItem(key(competitionId));
     if (!raw) return null;
     const v = JSON.parse(raw) as Partial<StoredSelection>;
-    if (typeof v.roomId !== "number" || typeof v.groupActivityId !== "number") return null;
-    return { roomId: v.roomId, groupActivityId: v.groupActivityId, savedDate: v.savedDate ?? "" };
+    if (typeof v.stageId !== "string" || typeof v.groupActivityId !== "number") return null;
+    return { stageId: v.stageId, groupActivityId: v.groupActivityId, savedDate: v.savedDate ?? "" };
   } catch {
     return null;
   }

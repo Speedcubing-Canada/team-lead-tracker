@@ -1,28 +1,71 @@
 import { describe, expect, it } from "vitest";
 import type { Wcif } from "./wca";
-import { sampleWcif } from "../test/fixtures/wcif";
+import { multiStageWcif, sampleWcif } from "../test/fixtures/wcif";
 import {
   activityById,
   canAccessCompetition,
   defaultGroupIndex,
-  defaultStageRoomId,
-  deriveStageRoomId,
+  defaultStageId,
+  deriveStageId,
   groupNumberFromCode,
   groupsForRoom,
+  groupsForStage,
   listDays,
   listStages,
   roomIdForActivity,
   staffByDuty,
   staffForGroup,
+  stageColor,
+  stageIdForActivity,
+  subStageLabel,
 } from "./wcif";
 
 describe("listStages", () => {
-  it("returns every room as a stage with venue context", () => {
+  it("returns every whole-room stage with venue context", () => {
     const stages = listStages(sampleWcif);
     expect(stages).toEqual([
-      { id: 1, name: "Red Stage", color: "#cc0000", venueId: 1, venueName: "Main Venue" },
-      { id: 2, name: "Blue Stage", color: "#0000cc", venueId: 1, venueName: "Main Venue" },
+      { id: "1", roomId: 1, subStage: null, name: "Red Stage", color: "#cc0000", roomName: "Red Stage", venueId: 1, venueName: "Main Venue" },
+      { id: "2", roomId: 2, subStage: null, name: "Blue Stage", color: "#0000cc", roomName: "Blue Stage", venueId: 1, venueName: "Main Venue" },
     ]);
+  });
+
+  it("splits a packed room into one stage per colour token, keeping whole-room rooms intact", () => {
+    const stages = listStages(multiStageWcif);
+    expect(stages).toEqual([
+      // Arena's tokens sort alphabetically: Blue before Red.
+      { id: "5:Blue", roomId: 5, subStage: "Blue", name: "Blue", color: "#2563eb", roomName: "Arena", venueId: 1, venueName: "Main Venue" },
+      { id: "5:Red", roomId: 5, subStage: "Red", name: "Red", color: "#dc2626", roomName: "Arena", venueId: 1, venueName: "Main Venue" },
+      { id: "6", roomId: 6, subStage: null, name: "Annex", color: "#777777", roomName: "Annex", venueId: 1, venueName: "Main Venue" },
+    ]);
+  });
+});
+
+describe("subStageLabel", () => {
+  it("extracts a colour token after the round name", () => {
+    expect(subStageLabel("3x3x3 Cube Round 1", "3x3x3 Cube Round 1 Red 2")).toBe("Red");
+    expect(subStageLabel("5x5x5 Cube Round 1", "5x5x5 Cube Round 1 Orange 10")).toBe("Orange");
+  });
+
+  it("returns '' for a whole-room 'Group N' name, across separators", () => {
+    expect(subStageLabel("3x3x3 Cube Round 1", "3x3x3 Cube Round 1 Group 1")).toBe("");
+    expect(subStageLabel("3x3x3 Cube, Round 1", "3x3x3 Cube, Round 1, Group 2")).toBe("");
+    expect(subStageLabel("R", "R g1")).toBe("");
+  });
+
+  it("returns '' when the group name doesn't start with the round name", () => {
+    expect(subStageLabel("3x3x3 Cube Round 1", "Totally Different Name")).toBe("");
+  });
+});
+
+describe("stageColor", () => {
+  it("maps a colour word to a hex, case-insensitively", () => {
+    expect(stageColor("Red", "#000000")).toBe("#dc2626");
+    expect(stageColor("blue", "#000000")).toBe("#2563eb");
+  });
+
+  it("falls back to the room colour for a non-colour or null label", () => {
+    expect(stageColor("Feature", "#abcdef")).toBe("#abcdef");
+    expect(stageColor(null, "#abcdef")).toBe("#abcdef");
   });
 });
 
@@ -94,38 +137,69 @@ describe("groupsForRoom", () => {
   });
 });
 
+describe("groupsForStage", () => {
+  it("returns a whole-room stage's groups by bare room id", () => {
+    expect(groupsForStage(sampleWcif, "1").map((g) => g.activity.id)).toEqual([101, 102, 111]);
+  });
+
+  it("returns only the sub-stage's groups for a packed room", () => {
+    expect(groupsForStage(multiStageWcif, "5:Red").map((g) => g.activity.id)).toEqual([501, 502]);
+    expect(groupsForStage(multiStageWcif, "5:Blue").map((g) => g.activity.id)).toEqual([503, 504]);
+    expect(groupsForStage(multiStageWcif, "6").map((g) => g.activity.id)).toEqual([601]);
+  });
+});
+
+describe("stageIdForActivity", () => {
+  it("maps a packed-room group to its sub-stage id", () => {
+    expect(stageIdForActivity(multiStageWcif, 501)).toBe("5:Red");
+    expect(stageIdForActivity(multiStageWcif, 504)).toBe("5:Blue");
+    expect(stageIdForActivity(multiStageWcif, 601)).toBe("6");
+  });
+
+  it("maps a whole-room group to its bare room id, and unknown ids to null", () => {
+    expect(stageIdForActivity(sampleWcif, 101)).toBe("1");
+    expect(stageIdForActivity(sampleWcif, 201)).toBe("2");
+    expect(stageIdForActivity(sampleWcif, 999)).toBeNull();
+  });
+});
+
 describe("defaultGroupIndex", () => {
   // Red Stage (room 1) groups, sorted: [101 (07-01 13:00–13:30Z), 102 (07-01
   // 13:30–14:00Z), 111 (07-02 09:00–09:30Z)].
   it("picks the in-progress group", () => {
-    expect(defaultGroupIndex(sampleWcif, 1, new Date("2026-07-01T13:15:00Z"))).toBe(0);
-    expect(defaultGroupIndex(sampleWcif, 1, new Date("2026-07-01T13:45:00Z"))).toBe(1);
+    expect(defaultGroupIndex(sampleWcif, "1", new Date("2026-07-01T13:15:00Z"))).toBe(0);
+    expect(defaultGroupIndex(sampleWcif, "1", new Date("2026-07-01T13:45:00Z"))).toBe(1);
   });
 
   it("treats a group's start as in-progress and its end as over", () => {
     // At 13:30 group 101 has just ended; control passes to group 102.
-    expect(defaultGroupIndex(sampleWcif, 1, new Date("2026-07-01T13:30:00Z"))).toBe(1);
+    expect(defaultGroupIndex(sampleWcif, "1", new Date("2026-07-01T13:30:00Z"))).toBe(1);
   });
 
   it("picks the next upcoming group of the day before it starts", () => {
-    expect(defaultGroupIndex(sampleWcif, 1, new Date("2026-07-01T12:00:00Z"))).toBe(0);
+    expect(defaultGroupIndex(sampleWcif, "1", new Date("2026-07-01T12:00:00Z"))).toBe(0);
   });
 
   it("falls back to the last group of today once all of today's groups have ended", () => {
-    expect(defaultGroupIndex(sampleWcif, 1, new Date("2026-07-01T20:00:00Z"))).toBe(1);
+    expect(defaultGroupIndex(sampleWcif, "1", new Date("2026-07-01T20:00:00Z"))).toBe(1);
   });
 
   it("only considers groups scheduled for today", () => {
     // Day 2: the only group is 111 (index 2), in progress.
-    expect(defaultGroupIndex(sampleWcif, 1, new Date("2026-07-02T09:15:00Z"))).toBe(2);
+    expect(defaultGroupIndex(sampleWcif, "1", new Date("2026-07-02T09:15:00Z"))).toBe(2);
   });
 
   it("returns 0 when no group is scheduled for today", () => {
-    expect(defaultGroupIndex(sampleWcif, 1, new Date("2026-07-05T10:00:00Z"))).toBe(0);
+    expect(defaultGroupIndex(sampleWcif, "1", new Date("2026-07-05T10:00:00Z"))).toBe(0);
   });
 
-  it("returns 0 for a room with no groups", () => {
-    expect(defaultGroupIndex(sampleWcif, 999, new Date("2026-07-01T13:15:00Z"))).toBe(0);
+  it("returns 0 for a stage with no groups", () => {
+    expect(defaultGroupIndex(sampleWcif, "999", new Date("2026-07-01T13:15:00Z"))).toBe(0);
+  });
+
+  it("indexes within a single sub-stage of a packed room", () => {
+    // Red groups [501 13:00–13:30, 502 13:30–14:00]; at 13:45 the second is live.
+    expect(defaultGroupIndex(multiStageWcif, "5:Red", new Date("2026-07-01T13:45:00Z"))).toBe(1);
   });
 });
 
@@ -206,44 +280,50 @@ describe("staffByDuty", () => {
   });
 });
 
-describe("deriveStageRoomId", () => {
-  it("derives the room from a person's staff assignment", () => {
-    expect(deriveStageRoomId(sampleWcif, 1001)).toBe(1);
+describe("deriveStageId", () => {
+  it("derives the stage from a person's staff assignment", () => {
+    expect(deriveStageId(sampleWcif, 1001)).toBe("1");
   });
 
-  it("ignores competitor assignments and uses the staffed room", () => {
+  it("ignores competitor assignments and uses the staffed stage", () => {
     // Dave competes on Red (room 1) but staffs on Blue (room 2).
-    expect(deriveStageRoomId(sampleWcif, 1004)).toBe(2);
+    expect(deriveStageId(sampleWcif, 1004)).toBe("2");
+  });
+
+  it("derives the sub-stage a lead staffs within a packed room", () => {
+    expect(deriveStageId(multiStageWcif, 2001)).toBe("5:Red");
+    expect(deriveStageId(multiStageWcif, 2002)).toBe("5:Blue");
+    expect(deriveStageId(multiStageWcif, 2003)).toBe("6");
   });
 
   it("returns null when the person has no staff assignments", () => {
-    expect(deriveStageRoomId(sampleWcif, 1003)).toBeNull();
+    expect(deriveStageId(sampleWcif, 1003)).toBeNull();
   });
 
   it("returns null for an unknown user", () => {
-    expect(deriveStageRoomId(sampleWcif, 5555)).toBeNull();
+    expect(deriveStageId(sampleWcif, 5555)).toBeNull();
   });
 
   it("counts only the given day's assignments when onDate is passed", () => {
     // Dave staffs Blue (room 2) via activity 201 on day 1; nothing on day 2.
-    expect(deriveStageRoomId(sampleWcif, 1004, "2026-07-01")).toBe(2);
-    expect(deriveStageRoomId(sampleWcif, 1004, "2026-07-02")).toBeNull();
+    expect(deriveStageId(sampleWcif, 1004, "2026-07-01")).toBe("2");
+    expect(deriveStageId(sampleWcif, 1004, "2026-07-02")).toBeNull();
   });
 });
 
-describe("defaultStageRoomId", () => {
+describe("defaultStageId", () => {
   it("prefers the derived stage", () => {
-    expect(defaultStageRoomId(sampleWcif, 1004)).toBe(2);
+    expect(defaultStageId(sampleWcif, 1004)).toBe("2");
   });
 
   it("falls back to the first stage when nothing can be derived", () => {
-    expect(defaultStageRoomId(sampleWcif, 1003)).toBe(1);
-    expect(defaultStageRoomId(sampleWcif, 5555)).toBe(1);
+    expect(defaultStageId(sampleWcif, 1003)).toBe("1");
+    expect(defaultStageId(sampleWcif, 5555)).toBe("1");
   });
 
   it("returns null when there are no stages", () => {
     const empty = { ...sampleWcif, schedule: { ...sampleWcif.schedule, venues: [] } };
-    expect(defaultStageRoomId(empty, 1001)).toBeNull();
+    expect(defaultStageId(empty, 1001)).toBeNull();
   });
 
   it("prefers the stage staffed *today* over the all-time stage", () => {
@@ -320,14 +400,14 @@ describe("defaultStageRoomId", () => {
       },
     };
 
-    expect(deriveStageRoomId(wcif, 1)).toBe(1); // all-time: room A (2 vs 1)
-    expect(defaultStageRoomId(wcif, 1, new Date("2026-07-01T09:30:00Z"))).toBe(2); // day 1 → B
-    expect(defaultStageRoomId(wcif, 1, new Date("2026-07-02T09:30:00Z"))).toBe(1); // day 2 → A
+    expect(deriveStageId(wcif, 1)).toBe("1"); // all-time: room A (2 vs 1)
+    expect(defaultStageId(wcif, 1, new Date("2026-07-01T09:30:00Z"))).toBe("2"); // day 1 → B
+    expect(defaultStageId(wcif, 1, new Date("2026-07-02T09:30:00Z"))).toBe("1"); // day 2 → A
   });
 
   it("falls back to the all-time stage on a day the person isn't staffing", () => {
     // Dave only staffs on day 1; querying day 2 yields his all-time stage (Blue).
-    expect(defaultStageRoomId(sampleWcif, 1004, new Date("2026-07-02T09:30:00Z"))).toBe(2);
+    expect(defaultStageId(sampleWcif, 1004, new Date("2026-07-02T09:30:00Z"))).toBe("2");
   });
 });
 

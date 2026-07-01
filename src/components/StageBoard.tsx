@@ -3,11 +3,12 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { Wcif } from "../lib/wca";
 import {
   defaultGroupIndex,
-  defaultStageRoomId,
-  groupsForRoom,
+  defaultStageId,
+  groupsForStage,
   listStages,
   staffByDuty,
   type GroupView,
+  type Stage,
 } from "../lib/wcif";
 import { dutyStyle } from "../lib/duties";
 import { checkDocId, type CheckRecord, type CheckStatus } from "../lib/checks";
@@ -42,25 +43,25 @@ function computeInitialSelection(
   wcif: Wcif,
   wcaUserId: number | undefined,
   competitionId: string | undefined,
-): { roomId: number | null; groupIndex: number } {
+): { stageId: string | null; groupIndex: number } {
   const stages = listStages(wcif);
   const stored = competitionId ? loadSelection(competitionId) : null;
-  const storedStageExists = stored != null && stages.some((s) => s.id === stored.roomId);
+  const storedStageExists = stored != null && stages.some((s) => s.id === stored.stageId);
 
-  const roomId = storedStageExists
-    ? stored!.roomId
-    : (wcaUserId != null ? defaultStageRoomId(wcif, wcaUserId) : stages[0]?.id) ?? null;
-  if (roomId == null) return { roomId: null, groupIndex: 0 };
+  const stageId = storedStageExists
+    ? stored!.stageId
+    : (wcaUserId != null ? defaultStageId(wcif, wcaUserId) : stages[0]?.id) ?? null;
+  if (stageId == null) return { stageId: null, groupIndex: 0 };
 
   // Same-day saved group restores exactly; a stale (earlier-day) one is dropped
   // so we re-detect today's group on the saved stage.
   if (storedStageExists && stored!.savedDate === todayDate()) {
-    const idx = groupsForRoom(wcif, roomId).findIndex(
+    const idx = groupsForStage(wcif, stageId).findIndex(
       (g) => g.activity.id === stored!.groupActivityId,
     );
-    if (idx >= 0) return { roomId, groupIndex: idx };
+    if (idx >= 0) return { stageId, groupIndex: idx };
   }
-  return { roomId, groupIndex: defaultGroupIndex(wcif, roomId) };
+  return { stageId, groupIndex: defaultGroupIndex(wcif, stageId) };
 }
 
 function dayLabel(date: string): string {
@@ -76,6 +77,31 @@ function timeLabel(isoDateTime: string): string {
     hour: "numeric",
     minute: "2-digit",
   });
+}
+
+/** Group stages by their room so the picker can show a room header per group. */
+function groupStagesByRoom(stages: Stage[]): { roomId: number; roomName: string; stages: Stage[] }[] {
+  const out: { roomId: number; roomName: string; stages: Stage[] }[] = [];
+  for (const s of stages) {
+    let bucket = out[out.length - 1];
+    if (!bucket || bucket.roomId !== s.roomId) {
+      bucket = { roomId: s.roomId, roomName: s.roomName, stages: [] };
+      out.push(bucket);
+    }
+    bucket.stages.push(s);
+  }
+  return out;
+}
+
+/** A small colour dot for a stage, legible on both light and dark backgrounds. */
+function Swatch({ color, className = "" }: { color: string; className?: string }) {
+  return (
+    <span
+      aria-hidden
+      style={{ backgroundColor: color }}
+      className={`inline-block h-3 w-3 shrink-0 rounded-full ring-1 ring-black/10 dark:ring-white/25 ${className}`}
+    />
+  );
 }
 
 /** Group the stage's groups by day so the picker can show day headers. */
@@ -111,14 +137,16 @@ export function StageBoard({
   handlers?: StageBoardHandlers;
 }) {
   const stages = useMemo(() => listStages(wcif), [wcif]);
+  const stageGroups = useMemo(() => groupStagesByRoom(stages), [stages]);
 
   const [initial] = useState(() => computeInitialSelection(wcif, wcaUserId, competitionId));
-  const [roomId, setRoomId] = useState<number | null>(initial.roomId);
+  const [stageId, setStageId] = useState<string | null>(initial.stageId);
   const [groupIndex, setGroupIndex] = useState(initial.groupIndex);
 
+  const stage = stages.find((s) => s.id === stageId) ?? null;
   const groups = useMemo(
-    () => (roomId != null ? groupsForRoom(wcif, roomId) : []),
-    [wcif, roomId],
+    () => (stageId != null ? groupsForStage(wcif, stageId) : []),
+    [wcif, stageId],
   );
   const dayBuckets = useMemo(() => byDay(groups), [groups]);
 
@@ -128,16 +156,16 @@ export function StageBoard({
   // Persist the selection so it survives tab navigation and reloads. Also stamps
   // the auto-detected selection as "today's" on first mount, which is intended.
   useEffect(() => {
-    if (!competitionId || roomId == null || !current) return;
+    if (!competitionId || stageId == null || !current) return;
     saveSelection(competitionId, {
-      roomId,
+      stageId,
       groupActivityId: current.activity.id,
       savedDate: todayDate(),
     });
-  }, [competitionId, roomId, current?.activity.id]);
+  }, [competitionId, stageId, current?.activity.id]);
 
-  function changeStage(id: number) {
-    setRoomId(id);
+  function changeStage(id: string) {
+    setStageId(id);
     // Land on the new stage's current/next group, not always its first.
     setGroupIndex(defaultGroupIndex(wcif, id));
   }
@@ -145,22 +173,30 @@ export function StageBoard({
   return (
     <div className="flex flex-col">
       <header className="sticky top-0 z-10 flex flex-col gap-2 border-b border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800">
-        <select
-          aria-label="Stage"
-          className="min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-base dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
-          value={roomId ?? ""}
-          onChange={(e) => changeStage(Number(e.target.value))}
-        >
-          {stages.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name}
-            </option>
-          ))}
-        </select>
+        <div className="flex items-center gap-2">
+          {stage && <Swatch color={stage.color} />}
+          <select
+            aria-label="Stage"
+            className="min-h-11 w-full min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 text-base dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+            value={stageId ?? ""}
+            onChange={(e) => changeStage(e.target.value)}
+          >
+            {stageGroups.map((room) => (
+              <optgroup key={room.roomId} label={room.roomName}>
+                {room.stages.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+        </div>
 
         {current && (
           <>
             <div className="flex items-center gap-2">
+              {stage && <Swatch color={stage.color} />}
               <Tooltip label="Previous group" side="bottom" longPress={false}>
                 <button
                   type="button"
@@ -212,7 +248,10 @@ export function StageBoard({
         <p className="p-6 text-center text-sm text-slate-500 dark:text-slate-400">No groups on this stage.</p>
       ) : (
         <div className="p-3">
-          <h2 className="mb-2 text-base font-semibold text-slate-900 dark:text-slate-100">{current.label}</h2>
+          <h2 className="mb-2 flex items-center gap-2 text-base font-semibold text-slate-900 dark:text-slate-100">
+            {stage && <Swatch color={stage.color} />}
+            {current.label}
+          </h2>
           <StaffList wcif={wcif} groupId={current.activity.id} checks={checks} handlers={handlers} />
         </div>
       )}
