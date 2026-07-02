@@ -50,6 +50,12 @@ jobs:
             exit $code
           fi
 
+      # Deploy Firestore security rules. Bundled into the release so a client change
+      # that depends on a rules change (e.g. allowing note-only checks) can never ship
+      # ahead of the rule that permits it — otherwise the new client hits PERMISSION_DENIED.
+      - name: Deploy Firestore rules
+        run: npx firebase-tools@15.22.3 deploy --only firestore:rules --project team-lead-tracker --non-interactive
+
       # Deploy the Cloud Functions too — independently of the hosting step above, so a
       # change under functions/ can never silently miss the release. v15 honors
       # FUNCTIONS_DISCOVERY_TIMEOUT to avoid discovery timeouts during source analysis.
