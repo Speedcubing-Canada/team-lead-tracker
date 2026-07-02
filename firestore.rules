@@ -30,9 +30,18 @@ service cloud.firestore {
 
       match /checks/{checkId} {
         allow read: if isMember(compId);
+        // A check carries either a present/absent mark, or is note-only (a lead
+        // jotted a note without marking attendance yet). A merge-update onto a
+        // doc that already has a status keeps that status in request.resource.data,
+        // so it still satisfies the first branch.
         allow create, update: if isMember(compId)
-          && request.resource.data.status in ['present', 'absent']
-          && request.resource.data.updatedByWcaId is int;
+          && request.resource.data.updatedByWcaId is int
+          && (
+               (('status' in request.resource.data)
+                 && request.resource.data.status in ['present', 'absent'])
+               || (!('status' in request.resource.data)
+                 && request.resource.data.note is string)
+             );
         allow delete: if isMember(compId);
       }
 

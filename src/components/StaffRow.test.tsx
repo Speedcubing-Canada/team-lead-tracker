@@ -58,21 +58,46 @@ describe("StaffRow notes", () => {
     expect(onNote).toHaveBeenCalledWith("left early");
   });
 
-  it("does not write a status-less note-only create on blur (no prior check)", () => {
+  it("saves a note-only check on blur when the staffer has no status", () => {
     const onStatus = vi.fn();
     const onNote = vi.fn();
     render(<StaffRow person={person} station={null} onStatus={onStatus} onNote={onNote} />);
 
-    // Typing a note for an unmarked staffer and tapping elsewhere must not try to
-    // create a check doc without a status — Firestore rules reject that. The text
-    // stays in the input until the lead marks present/absent.
+    // Typing a note for an unmarked staffer and tapping elsewhere persists it as a
+    // note-only check (no present/absent mark) — the reported bug was this note
+    // being silently dropped and lost on navigation.
     fireEvent.click(screen.getByLabelText("Add note"));
     const input = screen.getByPlaceholderText(/Add a note/);
     fireEvent.change(input, { target: { value: "left early" } });
     fireEvent.blur(input);
 
-    expect(onNote).not.toHaveBeenCalled();
+    expect(onNote).toHaveBeenCalledWith("left early");
+    // No status write: the note stands on its own without a present/absent mark.
     expect(onStatus).not.toHaveBeenCalled();
+  });
+
+  it("deletes a note-only check by clearing its note (via onStatus null)", () => {
+    const onStatus = vi.fn();
+    const onNote = vi.fn();
+    render(
+      <StaffRow
+        person={person}
+        station={null}
+        check={{ note: "left early", updatedByName: "L", updatedByWcaId: 9 }}
+        onStatus={onStatus}
+        onNote={onNote}
+      />,
+    );
+
+    // Emptying the note on a status-less check removes the doc rather than leaving
+    // an orphan with an empty note and no status.
+    const input = screen.getByPlaceholderText(/Add a note/);
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: "" } });
+    fireEvent.blur(input);
+
+    expect(onStatus).toHaveBeenCalledWith(null);
+    expect(onNote).not.toHaveBeenCalled();
   });
 
   it("does not pass a note when marking a staffer without editing the note", () => {

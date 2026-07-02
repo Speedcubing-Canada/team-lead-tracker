@@ -12,7 +12,9 @@ import type { AuthUser } from "../auth/AuthContext";
 export type CheckStatus = "present" | "absent";
 
 export interface CheckRecord {
-  status: CheckStatus;
+  // Absent for a note-only check: a lead can jot a note without yet marking
+  // present/absent. Dashboards tally only explicit "present"/"absent".
+  status?: CheckStatus;
   note: string;
   updatedByName: string;
   updatedByWcaId: number;
@@ -89,7 +91,11 @@ export async function writeStatus(
   );
 }
 
-/** Update a staffer's note (the check doc must already have a status). */
+/**
+ * Update a staffer's note. Creates a note-only check (no present/absent mark) if
+ * none exists — the security rules allow a status-less doc as long as it carries
+ * a string note.
+ */
 export async function writeNote(
   competitionId: string,
   activityId: number,

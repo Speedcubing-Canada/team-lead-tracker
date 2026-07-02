@@ -52,10 +52,14 @@ export function StaffRow({ person, station, check, onStatus, onNote }: StaffRowP
     // A status button press handles the note itself (atomically with the status).
     if (statusPress.current) return;
     const value = pendingNote();
-    // A note can't exist without a present/absent mark, so don't attempt a
-    // status-less create — the lead's text stays in the box until they mark one.
-    if (status === null) return;
-    if (value !== (check?.note ?? "")) onNote(value);
+    if (value === (check?.note ?? "")) return;
+    // A note-only check (no present/absent mark) is allowed. Emptying the note on
+    // such a check deletes the doc rather than leaving a status-less orphan.
+    if (status === null && value === "") {
+      if (check) onStatus(null);
+      return;
+    }
+    onNote(value);
   }
 
   // Tapping present/absent: if the lead was editing a note, fold it into the same write so a
