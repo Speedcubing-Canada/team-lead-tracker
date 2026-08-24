@@ -17,6 +17,7 @@ describe("shortEventName", () => {
     expect(shortEventName("444bf")).toBe("4BLD");
     expect(shortEventName("333mbf")).toBe("MBLD");
     expect(shortEventName("minx")).toBe("Mega");
+    expect(shortEventName("fto")).toBe("FTO");
   });
 
   it("returns null for an unknown event id", () => {

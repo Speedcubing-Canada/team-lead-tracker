@@ -23,6 +23,7 @@ const EVENT_SHORT_NAMES: Record<string, string> = {
   "444bf": "4BLD",
   "555bf": "5BLD",
   "333mbf": "MBLD",
+  fto: "FTO",
   "333ft": "Feet", // deprecated, but still appears in historical schedules
 };
 
