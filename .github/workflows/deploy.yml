@@ -1,15 +1,23 @@
 name: Deploy (prod)
 
-# Triggers a production deploy of BOTH hosting and functions when a release tag
-# (v*) is pushed, or manually from the Actions tab. Keeping these together means a
-# release can never ship a frontend change whose functions-side logic stays behind.
+# pull request → test (no deploy); push to main → test → deploy hosting, rules and functions.
 on:
   push:
-    tags: ['v*']
+    branches: [main]
+  pull_request:
   workflow_dispatch:
 
+# Never cancel on main: that would kill a live deploy.
+concurrency:
+  group: ci-${{ github.event_name }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
+
 jobs:
-  deploy:
+  test:
+    name: Test & build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -19,25 +27,32 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run test
+      - run: npm run build
+      - run: npm ci --prefix functions
+      - run: npm --prefix functions run build
+
+  deploy:
+    name: Deploy → Production
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
       - run: npm run build          # reads committed .env.production (no build secrets needed)
 
-      # Authenticate the firebase CLI for both deploys below. This writes a valid
-      # credentials file from the service-account secret and exports
-      # GOOGLE_APPLICATION_CREDENTIALS to subsequent steps.
-      #
-      # The deploys below pin firebase-tools@15.22.3 via npx rather than using the repo's
-      # local 15.20.0: that older build does not honor GOOGLE_APPLICATION_CREDENTIALS and
-      # fails with "Failed to authenticate, have you run firebase login?". 15.22.3 is the
-      # version the previous (working) hosting action used.
+      # firebase-tools pinned to 15.22.3: older builds ignore GOOGLE_APPLICATION_CREDENTIALS
+      # and fail with "Failed to authenticate, have you run firebase login?".
       - uses: google-github-actions/auth@v3
         with:
           credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
 
-      # Deploy hosting via the CLI. Firebase content-addresses hosting versions, so when a
-      # release ships content byte-identical to what is already live (e.g. it was deployed
-      # manually before the tag was pushed) the upload resolves to the same version id and
-      # the release API rejects it with 400 "is the current active version". That is a
-      # benign no-op — swallow exactly that error, and still fail on any real one.
+      # Hosting versions are content-addressed: redeploying identical content fails with
+      # 400 "is the current active version". Swallow exactly that, fail on anything else.
       - name: Deploy hosting
         run: |
           set +e
@@ -46,19 +61,13 @@ jobs:
           printf '%s\n' "$out"
           if [ $code -ne 0 ]; then
             printf '%s\n' "$out" | grep -q "is the current active version" \
-              && { echo "::notice::Hosting already up to date — nothing to release."; exit 0; }
+              && { echo "::notice::Hosting already up to date, nothing to release."; exit 0; }
             exit $code
           fi
 
-      # Deploy Firestore security rules. Bundled into the release so a client change
-      # that depends on a rules change (e.g. allowing note-only checks) can never ship
-      # ahead of the rule that permits it — otherwise the new client hits PERMISSION_DENIED.
       - name: Deploy Firestore rules
         run: npx firebase-tools@15.22.3 deploy --only firestore:rules --project team-lead-tracker --non-interactive
 
-      # Deploy the Cloud Functions too — independently of the hosting step above, so a
-      # change under functions/ can never silently miss the release. v15 honors
-      # FUNCTIONS_DISCOVERY_TIMEOUT to avoid discovery timeouts during source analysis.
       - name: Deploy functions
         env:
           FUNCTIONS_DISCOVERY_TIMEOUT: 60
