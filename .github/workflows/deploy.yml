@@ -14,6 +14,7 @@ concurrency:
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   test:
@@ -38,6 +39,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v7
         with:
           node-version: 22
@@ -68,7 +71,25 @@ jobs:
       - name: Deploy Firestore rules
         run: npx firebase-tools@15.22.3 deploy --only firestore:rules --project team-lead-tracker --non-interactive
 
+      # Functions deploys cost Cloud Build + Artifact Registry; skip unless functions/
+      # changed since the last successful deploy (compared to it, not the push's `before`,
+      # so changes in [skip ci] commits still ship).
+      - name: Check for functions changes
+        id: functions
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          last=$(gh run list -w deploy.yml -b main -s success -L 1 --json headSha -q '.[0].headSha')
+          if [ "${{ github.event_name }}" = push ] && [ -n "$last" ] \
+            && git diff --quiet "$last" HEAD -- functions/ firebase.json; then
+            echo "::notice::functions/ unchanged since $last, skipping functions deploy."
+            echo changed=false >> "$GITHUB_OUTPUT"
+          else
+            echo changed=true >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Deploy functions
+        if: steps.functions.outputs.changed == 'true'
         env:
           FUNCTIONS_DISCOVERY_TIMEOUT: 60
         run: |
