@@ -1,4 +1,4 @@
-import { currentPath, pinClock, renderApp } from "../test/renderApp";
+import { alice, currentPath, pinClock, renderApp } from "../test/renderApp";
 import { describe, expect, it } from "vitest";
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { backend, checksApi } from "../test/fakeBackend";
@@ -55,6 +55,21 @@ describe("stage view", () => {
     await waitFor(() =>
       expect(within(row("Alice Anderson")).getByLabelText("Absent")).toHaveAttribute("aria-pressed", "true"),
     );
+  });
+
+  it("keeps the note when a mark is tapped off", async () => {
+    await checksApi.writeStatus(COMP, 101, 2, "absent", alice, "sick");
+    renderApp(`/c/${COMP}`, { wcifs: [sampleWcif] });
+    await heading();
+    await within(row("Bob Brown")).findByDisplayValue("sick");
+
+    fireEvent.click(within(row("Bob Brown")).getByLabelText("Absent"));
+
+    await waitFor(() =>
+      expect(within(row("Bob Brown")).getByLabelText("Absent")).toHaveAttribute("aria-pressed", "false"),
+    );
+    expect(within(row("Bob Brown")).getByDisplayValue("sick")).toBeInTheDocument();
+    expect(backend.checks.get(COMP)?.get("101_2")).not.toHaveProperty("status");
   });
 
   it("keeps the selected group across a trip to the dashboard", async () => {

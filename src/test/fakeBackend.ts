@@ -66,7 +66,9 @@ function compListeners(competitionId: string): Set<() => void> {
   return set;
 }
 
-type CheckPatch = Pick<CheckRecord, "updatedByName" | "updatedByWcaId"> & Partial<CheckRecord>;
+/** `status: null` removes the field, like `deleteField()`. */
+type CheckPatch = Pick<CheckRecord, "updatedByName" | "updatedByWcaId"> &
+  Partial<Omit<CheckRecord, "status">> & { status?: CheckStatus | null };
 
 /** Merge-write like `setDoc(..., { merge: true })`; a null patch deletes. */
 function upsert(
@@ -77,8 +79,10 @@ function upsert(
 ): void {
   const map = compChecks(competitionId);
   const id = `${activityId}_${registrantId}`; // checkDocId
-  if (patch) map.set(id, { ...map.get(id), ...patch });
-  else map.delete(id);
+  if (patch) {
+    const { status, ...rest } = { ...map.get(id), ...patch };
+    map.set(id, status ? { status, ...rest } : rest);
+  } else map.delete(id);
   compListeners(competitionId).forEach((l) => l());
 }
 
@@ -102,12 +106,14 @@ export const checksApi = {
         competitionId,
         activityId,
         registrantId,
-        status && {
-          status,
-          ...(note !== undefined ? { note } : {}),
-          updatedByName: user.name,
-          updatedByWcaId: user.wcaUserId,
-        },
+        status === null && !note
+          ? null
+          : {
+              status,
+              ...(note !== undefined ? { note } : {}),
+              updatedByName: user.name,
+              updatedByWcaId: user.wcaUserId,
+            },
       ),
   ),
   writeNote: vi.fn(
