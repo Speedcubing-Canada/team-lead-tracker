@@ -1,3 +1,6 @@
+import type { Wcif } from "./wca";
+import { compDate, defaultStageId, listStages } from "./wcif";
+
 /**
  * The lead's current stage + group selection, persisted per competition in
  * localStorage so it survives tab navigation (Stage ↔ Dashboard unmounts the
@@ -34,4 +37,29 @@ export function saveSelection(competitionId: string, sel: StoredSelection): void
   } catch {
     // Ignore storage failures (private mode); the choice still applies this session.
   }
+}
+
+/** A selection saved today (venue time) for a stage the comp still has; older ones get re-derived. */
+export function freshSelection(
+  wcif: Wcif,
+  competitionId: string | undefined,
+  now: Date = new Date(),
+): StoredSelection | null {
+  const stored = competitionId ? loadSelection(competitionId) : null;
+  if (!stored || stored.savedDate !== compDate(wcif, now)) return null;
+  return listStages(wcif).some((s) => s.id === stored.stageId) ? stored : null;
+}
+
+/** Stage to open on: today's saved choice, else the one the lead works next, else the first. */
+export function initialStageId(
+  wcif: Wcif,
+  competitionId: string | undefined,
+  wcaUserId: number | undefined,
+  now: Date = new Date(),
+): string | null {
+  return (
+    freshSelection(wcif, competitionId, now)?.stageId ??
+    (wcaUserId != null ? defaultStageId(wcif, wcaUserId, now) : listStages(wcif)[0]?.id) ??
+    null
+  );
 }

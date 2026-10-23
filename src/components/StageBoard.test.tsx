@@ -39,6 +39,12 @@ describe("StageBoard", () => {
     expect(screen.getByText("Bob Brown")).toBeInTheDocument();
   });
 
+  it("shows group times on the venue's clock, whatever the viewer's zone", () => {
+    render(<StageBoard wcif={sampleWcif} wcaUserId={1001} />);
+    // 13:00Z is 9:00am in Toronto.
+    expect(screen.getByText(/· 9\D+00\b/)).toBeInTheDocument();
+  });
+
   it("falls back to the first stage when there is no user", () => {
     render(<StageBoard wcif={sampleWcif} />);
     expect(screen.getByLabelText("Stage")).toHaveValue("1");

@@ -3,8 +3,8 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { Wcif } from "../lib/wca";
 import {
   compDate,
+  compTimeZone,
   defaultGroupIndex,
-  defaultStageId,
   groupsForStage,
   listStages,
   staffByDuty,
@@ -13,7 +13,7 @@ import {
 } from "../lib/wcif";
 import { dutyStyle } from "../lib/duties";
 import { checkDocId, type CheckRecord, type CheckStatus } from "../lib/checks";
-import { loadSelection, saveSelection } from "../lib/selection";
+import { freshSelection, initialStageId, saveSelection } from "../lib/selection";
 import { StaffRow } from "./StaffRow";
 import { PersonNameButton } from "./PersonNameButton";
 import { Tooltip } from "./Tooltip";
@@ -43,26 +43,14 @@ function computeInitialSelection(
   wcaUserId: number | undefined,
   competitionId: string | undefined,
 ): { stageId: string | null; groupIndex: number } {
-  const stages = listStages(wcif);
-  const stored = competitionId ? loadSelection(competitionId) : null;
-  const freshStored =
-    stored != null &&
-    stored.savedDate === compDate(wcif) &&
-    stages.some((s) => s.id === stored.stageId);
-
-  if (freshStored) {
-    const idx = groupsForStage(wcif, stored!.stageId).findIndex(
-      (g) => g.activity.id === stored!.groupActivityId,
-    );
-    return {
-      stageId: stored!.stageId,
-      groupIndex: idx >= 0 ? idx : defaultGroupIndex(wcif, stored!.stageId),
-    };
-  }
-
-  const stageId = (wcaUserId != null ? defaultStageId(wcif, wcaUserId) : stages[0]?.id) ?? null;
+  const stageId = initialStageId(wcif, competitionId, wcaUserId);
   if (stageId == null) return { stageId: null, groupIndex: 0 };
-  return { stageId, groupIndex: defaultGroupIndex(wcif, stageId) };
+  const stored = freshSelection(wcif, competitionId);
+  const idx =
+    stored?.stageId === stageId
+      ? groupsForStage(wcif, stageId).findIndex((g) => g.activity.id === stored.groupActivityId)
+      : -1;
+  return { stageId, groupIndex: idx >= 0 ? idx : defaultGroupIndex(wcif, stageId) };
 }
 
 function dayLabel(date: string): string {
@@ -73,10 +61,12 @@ function dayLabel(date: string): string {
   });
 }
 
-function timeLabel(isoDateTime: string): string {
+/** Venue clock time, matching the venue-local day it's filed under. */
+function timeLabel(isoDateTime: string, timeZone: string): string {
   return new Date(isoDateTime).toLocaleTimeString(undefined, {
     hour: "numeric",
     minute: "2-digit",
+    timeZone,
   });
 }
 
@@ -163,7 +153,7 @@ export function StageBoard({
       groupActivityId: current.activity.id,
       savedDate: compDate(wcif),
     });
-  }, [competitionId, stageId, current?.activity.id]);
+  }, [wcif, competitionId, stageId, current?.activity.id]);
 
   function changeStage(id: string) {
     setStageId(id);
@@ -238,7 +228,7 @@ export function StageBoard({
               </Tooltip>
             </div>
             <p className="text-center text-xs text-slate-500 dark:text-slate-400">
-              {dayLabel(current.date)} · {timeLabel(current.activity.startTime)} · Group{" "}
+              {dayLabel(current.date)} · {timeLabel(current.activity.startTime, compTimeZone(wcif))} · Group{" "}
               {index + 1} of {groups.length}
             </p>
           </>

@@ -11,8 +11,8 @@ import {
   overallAbsenceRate,
   summarizeAbsentees,
 } from "../lib/absentees";
-import { compDate, defaultStageId, listDays, listStages } from "../lib/wcif";
-import { loadSelection } from "../lib/selection";
+import { listDays, listStages } from "../lib/wcif";
+import { initialStageId } from "../lib/selection";
 import { AbsenteeBoard } from "../components/AbsenteeBoard";
 import { DashboardSkeleton } from "../components/Skeleton";
 
@@ -43,22 +43,10 @@ export default function ShameDashboard() {
   const [scope, setScope] = useState<Scope>("team");
   const [day, setDay] = useState<string | null>(null);
 
-  // Match the Stage view's default: a stored stage carries over only within the
-  // same day; otherwise fall back to the stage the lead is working now (their
-  // next upcoming day), then the first stage. Keeps "My team" on the right stage.
-  const myStageId = useMemo(() => {
-    if (!wcif) return null;
-    const stages = listStages(wcif);
-    const stored = competitionId ? loadSelection(competitionId) : null;
-    if (
-      stored != null &&
-      stored.savedDate === compDate(wcif) &&
-      stages.some((s) => s.id === stored.stageId)
-    ) {
-      return stored.stageId;
-    }
-    return (user ? defaultStageId(wcif, user.wcaUserId) : null) ?? stages[0]?.id ?? null;
-  }, [wcif, competitionId, user]);
+  const myStageId = useMemo(
+    () => (wcif ? initialStageId(wcif, competitionId, user?.wcaUserId) : null),
+    [wcif, competitionId, user],
+  );
 
   const myStageName = wcif ? listStages(wcif).find((s) => s.id === myStageId)?.name : undefined;
   const days = wcif ? listDays(wcif) : [];
