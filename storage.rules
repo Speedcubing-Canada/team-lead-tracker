@@ -3,22 +3,20 @@ rules_version = '2';
 // Person photos uploaded by delegates so stage leads can match a name to a face.
 //
 // Access is gated on the user's Auth custom claims (set by grantCompetitionAccess),
-// NOT on a cross-service firestore.get — that proved unreliable from Storage rules
+// not on a cross-service firestore.get, which proved unreliable from Storage rules
 // and denied every write (storage/unauthorized). The claims:
 //   request.auth.token.comps[compId]           -> member of the competition (read)
 //   request.auth.token.privilegedComps[compId] -> delegate/organizer (write/delete)
-// The `!= null` guards avoid erroring when an older token lacks the claim.
+// `.get` with a default: indexing a missing claim errors instead of returning null.
 service firebase.storage {
   match /b/{bucket}/o {
     function isMember(compId) {
       return request.auth != null
-        && request.auth.token.comps != null
-        && request.auth.token.comps[compId] == true;
+        && request.auth.token.get('comps', {}).get(compId, false) == true;
     }
     function isPrivileged(compId) {
       return request.auth != null
-        && request.auth.token.privilegedComps != null
-        && request.auth.token.privilegedComps[compId] == true;
+        && request.auth.token.get('privilegedComps', {}).get(compId, false) == true;
     }
 
     match /competitions/{compId}/people/{fileName} {

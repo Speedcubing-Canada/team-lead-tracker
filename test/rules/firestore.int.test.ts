@@ -77,8 +77,18 @@ describe("checks", () => {
     await assertSucceeds(deleteDoc(doc(lead(), CHECK)));
   });
 
-  it("rejects a status outside present/absent", async () => {
+  it("rejects a status outside present/absent, even with a note", async () => {
     await assertFails(setDoc(doc(lead(), CHECK), mark("late")));
+    await assertFails(setDoc(doc(lead(), CHECK), { ...mark("late"), note: "x" }));
+  });
+
+  it("rejects a note that isn't a string alongside a mark", async () => {
+    await assertFails(setDoc(doc(lead(), CHECK), { ...mark("present"), note: 5 }));
+  });
+
+  it("rejects a check attributed to another WCA user", async () => {
+    await assertFails(setDoc(doc(lead(), CHECK), { ...mark("present"), updatedByWcaId: 2 }));
+    await assertFails(setDoc(doc(lead(), CHECK), { note: "x", updatedByWcaId: 2 }));
   });
 
   it("rejects a write without an int updatedByWcaId", async () => {
@@ -142,6 +152,10 @@ describe("people photos", () => {
   it("rejects malformed photo metadata", async () => {
     await assertFails(setDoc(doc(delegate(), PERSON), { photoPath: 1, uploadedByWcaId: 2 }));
     await assertFails(setDoc(doc(delegate(), PERSON), { photoPath: "p", uploadedByWcaId: "2" }));
+  });
+
+  it("rejects photo metadata attributed to another WCA user", async () => {
+    await assertFails(setDoc(doc(delegate(), PERSON), { ...photo, uploadedByWcaId: 1 }));
   });
 
   it("lets any member read, but only privileged members write", async () => {
