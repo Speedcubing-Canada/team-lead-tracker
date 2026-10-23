@@ -1,6 +1,6 @@
 import { QueryClient, type DefaultOptions } from "@tanstack/react-query";
 
-export const queryDefaults = {
+const queryDefaults = {
   // WCIF data changes rarely during a comp day; cache aggressively.
   staleTime: 5 * 60 * 1000,
   retry: 1,

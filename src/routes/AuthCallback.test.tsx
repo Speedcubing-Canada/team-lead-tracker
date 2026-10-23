@@ -3,8 +3,8 @@ import { describe, expect, it, vi } from "vitest";
 import { fireEvent, screen } from "@testing-library/react";
 import { authWithWca } from "../lib/authApi";
 import { loadMyCompetitions } from "../lib/myCompetitions";
+import { OAUTH_STATE_KEY as STATE_KEY } from "../auth/AuthContext";
 
-const STATE_KEY = "wca_oauth_state";
 const comps = [{ id: "Live2026", name: "Live Open", startDate: "2026-07-09", endDate: "2099-07-11", ongoing: true }];
 const token = (claims: Record<string, unknown>) => JSON.stringify(claims);
 

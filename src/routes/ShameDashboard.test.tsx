@@ -1,5 +1,5 @@
-import { renderApp } from "../test/renderApp";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { pinClock, renderApp } from "../test/renderApp";
+import { describe, expect, it } from "vitest";
 import { fireEvent, screen } from "@testing-library/react";
 import { checksApi } from "../test/fakeBackend";
 import { sampleWcif } from "../test/fixtures/wcif";
@@ -8,11 +8,7 @@ const COMP = "SampleComp2026";
 const other = { wcaUserId: 9, name: "Other Lead" };
 
 // After both comp days.
-beforeAll(() => {
-  vi.useFakeTimers({ toFake: ["Date"] });
-  vi.setSystemTime(new Date("2026-07-03T12:00:00Z"));
-});
-afterAll(() => vi.useRealTimers());
+pinClock("2026-07-03T12:00:00Z");
 
 const openDashboard = () => renderApp(`/c/${COMP}/shame`, { wcifs: [sampleWcif] });
 

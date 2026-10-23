@@ -39,7 +39,17 @@ export default defineConfig({
           environment: "jsdom",
           setupFiles: ["./src/test/setup.ts"],
           include: ["src/**/*.test.{ts,tsx}"],
-          exclude: ["**/*.int.test.*"],
+          exclude: ["**/*.int.test.*", "src/routes/**", "src/auth/**"],
+        },
+      },
+      // Whole-app tests on in-memory fakes; see src/test/routeSetup.ts.
+      {
+        extends: true,
+        test: {
+          name: "routes",
+          environment: "jsdom",
+          setupFiles: ["./src/test/setup.ts", "./src/test/routeSetup.ts"],
+          include: ["src/routes/**/*.test.tsx", "src/auth/**/*.test.tsx"],
         },
       },
       {

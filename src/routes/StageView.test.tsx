@@ -1,5 +1,5 @@
-import { alice, currentPath, renderApp } from "../test/renderApp";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { currentPath, pinClock, renderApp } from "../test/renderApp";
+import { describe, expect, it } from "vitest";
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { backend, checksApi } from "../test/fakeBackend";
 import { sampleWcif } from "../test/fixtures/wcif";
@@ -7,11 +7,7 @@ import { sampleWcif } from "../test/fixtures/wcif";
 const COMP = "SampleComp2026";
 
 // Before the comp, so every stage opens on its first group.
-beforeAll(() => {
-  vi.useFakeTimers({ toFake: ["Date"] });
-  vi.setSystemTime(new Date("2026-06-15T12:00:00Z"));
-});
-afterAll(() => vi.useRealTimers());
+pinClock("2026-06-15T12:00:00Z");
 
 const row = (name: string) => screen.getByText(name).closest("li")!;
 const heading = () => screen.findByRole("heading", { level: 2 });
@@ -40,10 +36,14 @@ describe("stage view", () => {
 
     fireEvent.click(within(row("Bob Brown")).getByLabelText("Present"));
 
-    expect(checksApi.writeStatus).toHaveBeenCalledWith(COMP, 101, 2, "present", alice, undefined);
     await waitFor(() =>
       expect(within(row("Bob Brown")).getByLabelText("Present")).toHaveAttribute("aria-pressed", "true"),
     );
+    expect(backend.checks.get(COMP)?.get("101_2")).toMatchObject({
+      status: "present",
+      updatedByName: "Alice Anderson",
+      updatedByWcaId: 1001,
+    });
   });
 
   it("shows another lead's mark live", async () => {

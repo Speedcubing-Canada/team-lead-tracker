@@ -1,17 +1,14 @@
-import { renderApp } from "../test/renderApp";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { pinClock, renderApp } from "../test/renderApp";
+import { describe, expect, it, vi } from "vitest";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
-import { backend, wcaFetch } from "../test/fakeBackend";
+import { fakeAuth, wcaFetch } from "../test/fakeBackend";
 import { sampleWcif } from "../test/fixtures/wcif";
 import { grantCompetitionAccess } from "../lib/authApi";
 import { hasCheckData } from "../lib/recentComps";
-import { storeMyCompetitions } from "../lib/myCompetitions";
+import { loadMyCompetitions, storeMyCompetitions } from "../lib/myCompetitions";
+import { OAUTH_STATE_KEY } from "../auth/AuthContext";
 
-beforeAll(() => {
-  vi.useFakeTimers({ toFake: ["Date"] });
-  vi.setSystemTime(new Date("2026-07-10T12:00:00Z"));
-});
-afterAll(() => vi.useRealTimers());
+pinClock("2026-07-10T12:00:00Z");
 
 const comp = (id: string, startDate: string, endDate: string, ongoing = false) => ({
   id,
@@ -40,7 +37,7 @@ describe("login screen", () => {
     vi.spyOn(console, "error").mockImplementation(() => {}); // jsdom can't navigate to WCA
     renderApp("/", { user: null });
     fireEvent.click(await screen.findByRole("button", { name: "Log in with WCA" }));
-    expect(sessionStorage.getItem("wca_oauth_state")).toMatch(/^[0-9a-f-]{36}$/);
+    expect(sessionStorage.getItem(OAUTH_STATE_KEY)).toMatch(/^[0-9a-f-]{36}$/);
   });
 
   it("lists live and upcoming comps, and recently ended ones that have check data", async () => {
@@ -64,7 +61,8 @@ describe("login screen", () => {
 
     expect(await screen.findByRole("heading", { level: 2 })).toBeInTheDocument();
     expect(grantCompetitionAccess).toHaveBeenCalledWith(live.id);
-    expect(backend.currentUser!.getIdToken).toHaveBeenCalledWith(true);
+    // Storage rules read the new comp claims from the ID token, so it must be refreshed.
+    expect(fakeAuth.currentUser!.getIdToken).toHaveBeenCalledWith(true);
     expect(wcaFetch).not.toHaveBeenCalled();
   });
 
@@ -133,7 +131,7 @@ describe("login screen", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: "Sign out" }));
     expect(await screen.findByRole("button", { name: "Log in with WCA" })).toBeInTheDocument();
-    expect(localStorage.getItem("wca_my_competitions")).toBeNull();
+    expect(loadMyCompetitions()).toEqual([]);
   });
 
   it("shows progress on a live comp while access is checked", async () => {

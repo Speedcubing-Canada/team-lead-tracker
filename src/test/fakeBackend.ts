@@ -3,10 +3,8 @@ import type { CheckRecord, CheckStatus } from "../lib/checks";
 import type { AuthUser } from "../auth/AuthContext";
 import type { Wcif } from "../lib/wca";
 
-/**
- * In-memory stand-ins for Firebase Auth, the checks collection and the WCA WCIF
- * endpoint, shared by route-level tests through renderApp's module mocks.
- */
+// Type-only app imports: the mocked modules load this file, so a runtime import would deadlock.
+
 type Listener<T> = (value: T) => void;
 
 export interface FakeFirebaseUser {
@@ -15,14 +13,17 @@ export interface FakeFirebaseUser {
   getIdToken: (forceRefresh?: boolean) => Promise<string>;
 }
 
-const authListeners = new Set<Listener<FakeFirebaseUser | null>>();
-const checkListeners = new Set<() => void>();
+/** Stands in for the Firebase `Auth` instance. */
+export const fakeAuth = { currentUser: null as FakeFirebaseUser | null };
 
+/** In-memory server data for route tests. */
 export const backend = {
-  currentUser: null as FakeFirebaseUser | null,
   checks: new Map<string, Map<string, CheckRecord>>(),
   wcifs: new Map<string, Wcif>(),
 };
+
+const authListeners = new Set<Listener<FakeFirebaseUser | null>>();
+const checkListeners = new Map<string, Set<() => void>>();
 
 export function firebaseUser(claims: Record<string, unknown>): FakeFirebaseUser {
   return {
@@ -33,7 +34,7 @@ export function firebaseUser(claims: Record<string, unknown>): FakeFirebaseUser 
 }
 
 export function setFirebaseUser(user: FakeFirebaseUser | null): void {
-  backend.currentUser = user;
+  fakeAuth.currentUser = user;
   authListeners.forEach((l) => l(user));
 }
 
@@ -43,7 +44,7 @@ export const signInAs = (user: AuthUser | null) =>
 export const firebaseAuth = {
   onAuthStateChanged: (_auth: unknown, cb: Listener<FakeFirebaseUser | null>) => {
     authListeners.add(cb);
-    queueMicrotask(() => authListeners.has(cb) && cb(backend.currentUser));
+    queueMicrotask(() => authListeners.has(cb) && cb(fakeAuth.currentUser));
     return () => authListeners.delete(cb);
   },
   signOut: vi.fn(async () => setFirebaseUser(null)),
@@ -59,12 +60,34 @@ function compChecks(competitionId: string): Map<string, CheckRecord> {
   return map;
 }
 
+function compListeners(competitionId: string): Set<() => void> {
+  let set = checkListeners.get(competitionId);
+  if (!set) checkListeners.set(competitionId, (set = new Set()));
+  return set;
+}
+
+type CheckPatch = Pick<CheckRecord, "updatedByName" | "updatedByWcaId"> & Partial<CheckRecord>;
+
+/** Merge-write like `setDoc(..., { merge: true })`; a null patch deletes. */
+function upsert(
+  competitionId: string,
+  activityId: number,
+  registrantId: number,
+  patch: CheckPatch | null,
+): void {
+  const map = compChecks(competitionId);
+  const id = `${activityId}_${registrantId}`; // checkDocId
+  if (patch) map.set(id, { ...map.get(id), ...patch });
+  else map.delete(id);
+  compListeners(competitionId).forEach((l) => l());
+}
+
 export const checksApi = {
   subscribeToChecks: vi.fn((competitionId: string, onChange: Listener<Map<string, CheckRecord>>) => {
     const notify = () => onChange(new Map(compChecks(competitionId)));
-    checkListeners.add(notify);
+    compListeners(competitionId).add(notify);
     notify();
-    return () => checkListeners.delete(notify);
+    return () => compListeners(competitionId).delete(notify);
   }),
   writeStatus: vi.fn(
     async (
@@ -74,28 +97,26 @@ export const checksApi = {
       status: CheckStatus | null,
       user: AuthUser,
       note?: string,
-    ) => {
-      const map = compChecks(competitionId);
-      const id = `${activityId}_${registrantId}`;
-      if (status === null) map.delete(id);
-      else
-        map.set(id, {
-          ...map.get(id),
+    ) =>
+      upsert(
+        competitionId,
+        activityId,
+        registrantId,
+        status && {
           status,
           ...(note !== undefined ? { note } : {}),
           updatedByName: user.name,
           updatedByWcaId: user.wcaUserId,
-        } as CheckRecord);
-      checkListeners.forEach((l) => l());
-    },
+        },
+      ),
   ),
   writeNote: vi.fn(
-    async (competitionId: string, activityId: number, registrantId: number, note: string, user: AuthUser) => {
-      const map = compChecks(competitionId);
-      const id = `${activityId}_${registrantId}`;
-      map.set(id, { ...map.get(id), note, updatedByName: user.name, updatedByWcaId: user.wcaUserId });
-      checkListeners.forEach((l) => l());
-    },
+    async (competitionId: string, activityId: number, registrantId: number, note: string, user: AuthUser) =>
+      upsert(competitionId, activityId, registrantId, {
+        note,
+        updatedByName: user.name,
+        updatedByWcaId: user.wcaUserId,
+      }),
   ),
 };
 
@@ -107,7 +128,7 @@ export const wcaFetch = vi.fn(async (url: string) => {
 });
 
 export function resetBackend(): void {
-  backend.currentUser = null;
+  fakeAuth.currentUser = null;
   backend.checks.clear();
   backend.wcifs.clear();
   authListeners.clear();

@@ -17,7 +17,7 @@ export interface AuthState {
   signOut: () => void;
 }
 
-const STATE_KEY = "wca_oauth_state";
+export const OAUTH_STATE_KEY = "wca_oauth_state";
 
 const AuthContext = createContext<AuthState | null>(null);
 
@@ -67,7 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = useCallback(() => {
     const state = crypto.randomUUID();
-    sessionStorage.setItem(STATE_KEY, state);
+    sessionStorage.setItem(OAUTH_STATE_KEY, state);
     window.location.href = buildWcaAuthorizeUrl(state);
   }, []);
 
@@ -91,7 +91,7 @@ export function useAuth(): AuthState {
 
 /** Validate the OAuth state param echoed back by WCA against what we stored. */
 export function consumeOAuthState(returned: string | null): boolean {
-  const expected = sessionStorage.getItem(STATE_KEY);
-  sessionStorage.removeItem(STATE_KEY);
+  const expected = sessionStorage.getItem(OAUTH_STATE_KEY);
+  sessionStorage.removeItem(OAUTH_STATE_KEY);
   return !!returned && !!expected && returned === expected;
 }
