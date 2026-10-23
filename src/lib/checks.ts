@@ -15,7 +15,7 @@ export interface CheckRecord {
   // Absent for a note-only check: a lead can jot a note without yet marking
   // present/absent. Dashboards tally only explicit "present"/"absent".
   status?: CheckStatus;
-  note: string;
+  note?: string;
   updatedByName: string;
   updatedByWcaId: number;
 }

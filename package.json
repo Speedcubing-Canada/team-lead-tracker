@@ -7,13 +7,13 @@
     "dev": "vite",
     "build": "tsc -b && tsc -p functions/tsconfig.test.json && vite build",
     "preview": "vite preview",
-    "test": "vitest run --project unit --project functions",
-    "test:watch": "vitest --project unit --project functions",
+    "test": "vitest run --project unit --project routes --project functions",
+    "test:watch": "vitest --project unit --project routes --project functions",
     "emulators": "FUNCTIONS_DISCOVERY_TIMEOUT=60 firebase emulators:start",
     "deploy": "npm run build && npm run test && firebase deploy --only hosting",
     "deploy:functions": "npm --prefix functions run build && FUNCTIONS_DISCOVERY_TIMEOUT=60 firebase deploy --only functions",
     "test:int": "firebase emulators:exec --project demo-test --only auth,firestore,storage \"vitest run --project integration\"",
-    "coverage": "vitest run --project unit --project functions --coverage"
+    "coverage": "vitest run --project unit --project routes --project functions --coverage"
   },
   "dependencies": {
     "@fontsource/montserrat": "^5.3.0",

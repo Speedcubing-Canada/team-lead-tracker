@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
-import { onAuthStateChanged, signOut as firebaseSignOut } from "firebase/auth";
+import { onAuthStateChanged, signOut as firebaseSignOut, type User } from "firebase/auth";
 import { auth } from "../lib/firebase";
 import { buildWcaAuthorizeUrl } from "../lib/wca";
 import { clearMyCompetitions } from "../lib/myCompetitions";
@@ -17,7 +17,7 @@ export interface AuthState {
   signOut: () => void;
 }
 
-const STATE_KEY = "wca_oauth_state";
+export const OAUTH_STATE_KEY = "wca_oauth_state";
 
 const AuthContext = createContext<AuthState | null>(null);
 
@@ -27,32 +27,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let unsub = () => {};
-    try {
-      unsub = onAuthStateChanged(auth(), async (fbUser) => {
-        if (!fbUser) {
-          setUser(null);
-          setLoading(false);
-          return;
-        }
+    let recheck = () => {};
+    const resolve = async (fbUser: User | null) => {
+      window.removeEventListener("online", recheck);
+      if (!fbUser) {
+        setUser(null);
+        setLoading(false);
+        return;
+      }
+      try {
         const { claims } = await fbUser.getIdTokenResult();
+        if (auth().currentUser !== fbUser) return; // a later sign-in/out won
         const wcaUserId = Number(claims["wcaUserId"]);
         setUser(
           Number.isFinite(wcaUserId)
             ? { wcaUserId, name: String(claims["name"] ?? "Unknown") }
             : null,
         );
-        setLoading(false);
-      });
+      } catch {
+        if (auth().currentUser !== fbUser) return;
+        // Usually an expired token on venue wifi; the session is intact, so retry once back online.
+        setUser(null);
+        recheck = () => void resolve(fbUser);
+        window.addEventListener("online", recheck, { once: true });
+      }
+      setLoading(false);
+    };
+    try {
+      unsub = onAuthStateChanged(auth(), resolve);
     } catch {
       // Firebase not configured yet — render as logged out.
       setLoading(false);
     }
-    return () => unsub();
+    return () => {
+      unsub();
+      window.removeEventListener("online", recheck);
+    };
   }, []);
 
   const signIn = useCallback(() => {
     const state = crypto.randomUUID();
-    sessionStorage.setItem(STATE_KEY, state);
+    sessionStorage.setItem(OAUTH_STATE_KEY, state);
     window.location.href = buildWcaAuthorizeUrl(state);
   }, []);
 
@@ -76,7 +91,7 @@ export function useAuth(): AuthState {
 
 /** Validate the OAuth state param echoed back by WCA against what we stored. */
 export function consumeOAuthState(returned: string | null): boolean {
-  const expected = sessionStorage.getItem(STATE_KEY);
-  sessionStorage.removeItem(STATE_KEY);
+  const expected = sessionStorage.getItem(OAUTH_STATE_KEY);
+  sessionStorage.removeItem(OAUTH_STATE_KEY);
   return !!returned && !!expected && returned === expected;
 }

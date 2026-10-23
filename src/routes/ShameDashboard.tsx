@@ -1,7 +1,5 @@
 import { useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
-import { useWcif } from "../lib/useWcif";
 import { useChecks } from "../lib/useChecks";
 import {
   absencesByGroup,
@@ -11,17 +9,14 @@ import {
   overallAbsenceRate,
   summarizeAbsentees,
 } from "../lib/absentees";
-import { defaultStageId, listDays, listStages } from "../lib/wcif";
-import { loadSelection } from "../lib/selection";
+import { listDays, listStages } from "../lib/wcif";
+import { initialStageId } from "../lib/selection";
 import { AbsenteeBoard } from "../components/AbsenteeBoard";
 import { DashboardSkeleton } from "../components/Skeleton";
+import { WcifGate } from "../components/WcifGate";
+import type { Wcif } from "../lib/wca";
 
 type Scope = "team" | "global";
-
-/** Today's calendar date (YYYY-MM-DD), matching StoredSelection.savedDate. */
-function todayDate(): string {
-  return new Date().toISOString().slice(0, 10);
-}
 
 /** Format a YYYY-MM-DD day for the comparison day picker, e.g. "Wed Jul 1". */
 function dayLabel(date: string): string {
@@ -40,39 +35,30 @@ function dayLabel(date: string): string {
  * only, so duties nobody has ticked yet don't pose as filled.
  */
 export default function ShameDashboard() {
-  const { competitionId } = useParams();
+  return (
+    <WcifGate skeleton={<DashboardSkeleton />}>
+      {(wcif, competitionId) => <Dashboard wcif={wcif} competitionId={competitionId} />}
+    </WcifGate>
+  );
+}
+
+function Dashboard({ wcif, competitionId }: { wcif: Wcif; competitionId: string }) {
   const { user } = useAuth();
-  const { data: wcif, isLoading } = useWcif(competitionId);
   const checks = useChecks(competitionId);
 
   const [scope, setScope] = useState<Scope>("team");
   const [day, setDay] = useState<string | null>(null);
 
-  // Match the Stage view's default: a stored stage carries over only within the
-  // same day; otherwise fall back to the stage the lead is working now (their
-  // next upcoming day), then the first stage. Keeps "My team" on the right stage.
-  const myStageId = useMemo(() => {
-    if (!wcif) return null;
-    const stages = listStages(wcif);
-    const stored = competitionId ? loadSelection(competitionId) : null;
-    if (
-      stored != null &&
-      stored.savedDate === todayDate() &&
-      stages.some((s) => s.id === stored.stageId)
-    ) {
-      return stored.stageId;
-    }
-    return (user ? defaultStageId(wcif, user.wcaUserId) : null) ?? stages[0]?.id ?? null;
-  }, [wcif, competitionId, user]);
+  const myStageId = useMemo(
+    () => initialStageId(wcif, competitionId, user?.wcaUserId),
+    [wcif, competitionId, user],
+  );
 
-  const myStageName = wcif ? listStages(wcif).find((s) => s.id === myStageId)?.name : undefined;
-  const days = wcif ? listDays(wcif) : [];
-  const effectiveDay = day ?? (wcif ? currentCompetitionDay(wcif) : null);
+  const myStageName = listStages(wcif).find((s) => s.id === myStageId)?.name;
+  const days = listDays(wcif);
+  const effectiveDay = day ?? currentCompetitionDay(wcif);
 
   const { absentees, byPerson, byGroup, byStage, overall } = useMemo(() => {
-    if (!wcif) {
-      return { absentees: [], byPerson: [], byGroup: [], byStage: [], overall: { absent: 0, total: 0 } };
-    }
     const stageId = scope === "team" ? myStageId : null;
     return {
       absentees: summarizeAbsentees(wcif, checks, stageId),
@@ -83,10 +69,6 @@ export default function ShameDashboard() {
       overall: overallAbsenceRate(wcif, checks, undefined, stageId),
     };
   }, [wcif, checks, scope, myStageId, effectiveDay]);
-
-  if (isLoading) {
-    return <DashboardSkeleton />;
-  }
 
   const tab = (value: Scope, label: string) => (
     <button

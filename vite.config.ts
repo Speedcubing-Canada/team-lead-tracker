@@ -29,7 +29,7 @@ export default defineConfig({
       include: ["src/**", "functions/src/**"],
       exclude: ["**/*.test.*", "src/test/**", "src/main.tsx"],
       // Ratchet: raise as coverage grows, never lower.
-      thresholds: { statements: 62, branches: 58, functions: 60, lines: 62 },
+      thresholds: { statements: 83, branches: 77, functions: 85, lines: 84 },
     },
     projects: [
       {
@@ -39,7 +39,17 @@ export default defineConfig({
           environment: "jsdom",
           setupFiles: ["./src/test/setup.ts"],
           include: ["src/**/*.test.{ts,tsx}"],
-          exclude: ["**/*.int.test.*"],
+          exclude: ["**/*.int.test.*", "src/routes/**", "src/auth/**"],
+        },
+      },
+      // Whole-app tests on in-memory fakes; see src/test/routeSetup.ts.
+      {
+        extends: true,
+        test: {
+          name: "routes",
+          environment: "jsdom",
+          setupFiles: ["./src/test/setup.ts", "./src/test/routeSetup.ts"],
+          include: ["src/routes/**/*.test.tsx", "src/auth/**/*.test.tsx"],
         },
       },
       {
