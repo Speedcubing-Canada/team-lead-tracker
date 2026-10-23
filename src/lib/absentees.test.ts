@@ -164,6 +164,14 @@ describe("overallAbsenceRate", () => {
     expect(overallAbsenceRate(sampleWcif, checks, AFTER_COMP)).toEqual({ absent: 2, total: 3 });
   });
 
+  it("doesn't count a note-only check as a marked duty", () => {
+    const checks = new Map<string, CheckRecord>([
+      [checkDocId(101, 1), rec("absent")],
+      [checkDocId(101, 2), rec(undefined, "sick")],
+    ]);
+    expect(overallAbsenceRate(sampleWcif, checks, AFTER_COMP)).toEqual({ absent: 1, total: 1 });
+  });
+
   it("scopes the rate to one stage when given a stageId", () => {
     const checks = new Map<string, CheckRecord>([
       [checkDocId(101, 1), rec("absent")], // Alice, Red Stage

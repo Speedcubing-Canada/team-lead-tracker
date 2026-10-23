@@ -41,6 +41,13 @@ describe("reimbursementByPerson", () => {
     expect(bob.coverage).toBeCloseTo(0.5);
   });
 
+  it("treats a note-only check as unmarked, not present", () => {
+    const checks = new Map<string, CheckRecord>([[checkDocId(101, 2), rec(undefined, "sick")]]);
+    const bob = row(reimbursementByPerson(sampleWcif, checks, AFTER), "Bob Brown");
+    expect(bob.present).toBe(0);
+    expect(bob.unknown).toBe(2);
+  });
+
   it("derives absentRate from total (incl. unknown) and coverage from marked-only", () => {
     // Bob: 101 absent, 102 unknown → 1 absent of 2 total = 50%; coverage 1/2.
     const checks = new Map<string, CheckRecord>([[checkDocId(101, 2), rec("absent", "no-show")]]);

@@ -61,7 +61,7 @@ export function reimbursementByPerson(
     for (const a of person.assignments) {
       if (!isStaffCode(a.assignmentCode) || !started.has(a.activityId)) continue;
       const rec = checks.get(checkDocId(a.activityId, person.registrantId));
-      if (!rec) unknown += 1;
+      if (!rec?.status) unknown += 1; // a note alone isn't a mark
       else if (rec.status === "absent") absent += 1;
       else present += 1;
     }
