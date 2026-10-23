@@ -61,8 +61,8 @@ function StageViewBody({ wcif, competitionId }: { wcif: Wcif; competitionId: str
         handlers={handlers}
       />
       {saveFailed && (
-        // Above the bottom tab bar, where the lead's thumb already is.
-        <div className="fixed inset-x-3 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-30">
+        // Pinned to the bottom of the scroll area, just above the tab bar where the thumb is.
+        <div className="sticky bottom-3 z-30 px-3">
           <ErrorNotice
             title="Not saved"
             body="Your last change didn't reach the server. Try again, or reopen the competition from the list."
