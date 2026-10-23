@@ -2,9 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { signInWithCustomToken } from "firebase/auth";
+import { FunctionsError } from "firebase/functions";
 import { auth } from "../lib/firebase";
 import { authWithWca } from "../lib/authApi";
 import { storeMyCompetitions } from "../lib/myCompetitions";
+import { clearSelections } from "../lib/selection";
 import { consumeOAuthState } from "../auth/AuthContext";
 import { wcaRedirectUri } from "../lib/wca";
 
@@ -38,12 +40,16 @@ export default function AuthCallback() {
     void (async () => {
       try {
         const { token, competitions } = await authWithWca(code, wcaRedirectUri());
+        // A previous lead on this phone may never have signed out.
+        clearSelections();
         storeMyCompetitions(competitions);
         await signInWithCustomToken(auth(), token);
         navigate("/", { replace: true });
       } catch (e) {
+        // "internal" covers both an unreachable server and a crash in the function.
+        const internal = e instanceof FunctionsError && e.code === "functions/internal";
         const msg = e instanceof Error ? e.message : "";
-        setError(msg && msg !== "internal" ? msg : "Login failed. Is the server reachable?");
+        setError(msg && !internal ? msg : "Login failed. Is the server reachable?");
       }
     })();
   }, [params, navigate]);

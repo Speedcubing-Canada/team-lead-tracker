@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
+import { FunctionsError } from "firebase/functions";
 import { FileDown, Loader2, LogIn, LogOut } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
 import { auth } from "../lib/firebase";
@@ -22,7 +23,7 @@ function formatRange(startDate: string, endDate: string): string {
 type OpenError = { title: string; body: string; source: "manual" | "list" };
 
 function describeOpenError(err: unknown): Omit<OpenError, "source"> {
-  const code = (err as { code?: string } | null)?.code;
+  const code = err instanceof FunctionsError ? err.code : undefined;
   if (code === "functions/not-found" || code === "functions/invalid-argument") {
     return {
       title: "Competition not found",

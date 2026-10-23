@@ -17,6 +17,10 @@ stage share the same live check-off state.
 - `npm test` / `npm run test:watch` — Vitest. Run a single file: `npx vitest run src/lib/wcif.test.ts`.
   Filter by name: `npx vitest run -t "derives stage"`.
 - `npm run emulators` — Firebase emulator suite (Auth :9099, Functions :5001, Firestore :8080, UI).
+- `npm run test:e2e` — Playwright journeys (`e2e/`) on a phone viewport, against the emulators
+  (project `demo-e2e`, `firebase.e2e.json`) and a fake WCA server (`e2e/fakeWca.ts`, :9300).
+  Stop `npm run emulators` first (same ports). For one spec: `npm run e2e:emulators` in one
+  terminal, `npx playwright test e2e/marking.spec.ts` in another.
 - Functions build separately: `npm --prefix functions run build`.
 
 ## Architecture — the load-bearing idea

@@ -1,8 +1,10 @@
 import { renderApp } from "../test/renderApp";
 import { describe, expect, it, vi } from "vitest";
+import { FunctionsError } from "firebase/functions";
 import { fireEvent, screen } from "@testing-library/react";
 import { authWithWca } from "../lib/authApi";
 import { loadMyCompetitions } from "../lib/myCompetitions";
+import { loadSelection, saveSelection } from "../lib/selection";
 import { OAUTH_STATE_KEY as STATE_KEY } from "../auth/AuthContext";
 
 const comps = [{ id: "Live2026", name: "Live Open", startDate: "2026-07-09", endDate: "2099-07-11", ongoing: true }];
@@ -27,6 +29,19 @@ describe("OAuth callback", () => {
     expect(loadMyCompetitions()).toEqual(comps);
   });
 
+  it("forgets the previous lead's stage, even if they never signed out", async () => {
+    saveSelection("Live2026", { stageId: "Blue", groupActivityId: 1, savedDate: "2026-07-10" });
+    sessionStorage.setItem(STATE_KEY, "s1");
+    vi.mocked(authWithWca).mockResolvedValue({
+      token: token({ wcaUserId: 1001, name: "Alice Anderson" }),
+      competitions: comps,
+    });
+    callback("code=c1&state=s1");
+
+    expect(await screen.findByText("Signed in as Alice Anderson")).toBeInTheDocument();
+    expect(loadSelection("Live2026")).toBeNull();
+  });
+
   it("reports a cancelled WCA login", async () => {
     callback("error=access_denied");
     expect(await screen.findByText("WCA login was cancelled (access_denied).")).toBeInTheDocument();
@@ -47,14 +62,16 @@ describe("OAuth callback", () => {
 
   it("shows the server's reason for a failed login", async () => {
     sessionStorage.setItem(STATE_KEY, "s1");
-    vi.mocked(authWithWca).mockRejectedValue(new Error("WCA token exchange failed (401)"));
+    vi.mocked(authWithWca).mockRejectedValue(
+      new FunctionsError("invalid-argument", "code and redirectUri are required"),
+    );
     callback("code=c1&state=s1");
-    expect(await screen.findByText("WCA token exchange failed (401)")).toBeInTheDocument();
+    expect(await screen.findByText("code and redirectUri are required")).toBeInTheDocument();
   });
 
-  it("maps a bare 'internal' error to a reachability hint, with a way back", async () => {
+  it("maps an internal error (crash or unreachable) to a reachability hint, with a way back", async () => {
     sessionStorage.setItem(STATE_KEY, "s1");
-    vi.mocked(authWithWca).mockRejectedValue(new Error("internal"));
+    vi.mocked(authWithWca).mockRejectedValue(new FunctionsError("internal", "INTERNAL"));
     callback("code=c1&state=s1");
 
     expect(await screen.findByText("Login failed. Is the server reachable?")).toBeInTheDocument();

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { freshSelection, initialStageId, loadSelection, saveSelection } from "./selection";
+import { clearSelections, freshSelection, initialStageId, loadSelection, saveSelection } from "./selection";
 import { sampleWcif } from "../test/fixtures/wcif";
 
 afterEach(() => localStorage.clear());
@@ -24,6 +24,16 @@ describe("selection persistence", () => {
     saveSelection("CompB", { stageId: "2", groupActivityId: 201, savedDate: "2026-07-01" });
     expect(loadSelection("CompA")?.stageId).toBe("1");
     expect(loadSelection("CompB")?.stageId).toBe("2");
+  });
+
+  it("clears every competition's selection and nothing else", () => {
+    saveSelection("A", { stageId: "1", groupActivityId: 101, savedDate: "2026-07-01" });
+    saveSelection("B", { stageId: "2", groupActivityId: 201, savedDate: "2026-07-01" });
+    localStorage.setItem("other", "kept");
+    clearSelections();
+    expect(loadSelection("A")).toBeNull();
+    expect(loadSelection("B")).toBeNull();
+    expect(localStorage.getItem("other")).toBe("kept");
   });
 
   it("returns null when nothing is stored", () => {

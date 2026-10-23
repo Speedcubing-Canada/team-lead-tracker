@@ -1,6 +1,7 @@
 import { pinClock, renderApp } from "../test/renderApp";
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { FunctionsError, type FunctionsErrorCodeCore } from "firebase/functions";
 import { fakeAuth, wcaFetch } from "../test/fakeBackend";
 import { sampleWcif } from "../test/fixtures/wcif";
 import { grantCompetitionAccess } from "../lib/authApi";
@@ -29,8 +30,8 @@ const granted = (wcif = sampleWcif) =>
     privileged: false,
     wcif,
   });
-const denied = (code: string, message = "denied") =>
-  vi.mocked(grantCompetitionAccess).mockRejectedValue(Object.assign(new Error(message), { code }));
+const denied = (code: FunctionsErrorCodeCore, message = "denied") =>
+  vi.mocked(grantCompetitionAccess).mockRejectedValue(new FunctionsError(code, message));
 
 describe("login screen", () => {
   it("offers WCA login when signed out, storing a fresh OAuth state on tap", async () => {
@@ -78,7 +79,7 @@ describe("login screen", () => {
 
   it("explains a denied comp in the list", async () => {
     storeMyCompetitions([live]);
-    denied("functions/permission-denied", "Only staff of Live2026 can use the tracker.");
+    denied("permission-denied", "Only staff of Live2026 can use the tracker.");
     renderApp("/");
 
     fireEvent.click(await screen.findByRole("button", { name: /Live2026 Open/ }));
@@ -90,7 +91,7 @@ describe("login screen", () => {
 
   it("falls back to a generic message for unexpected errors", async () => {
     storeMyCompetitions([live]);
-    denied("functions/internal", "internal");
+    denied("internal", "internal");
     renderApp("/");
 
     fireEvent.click(await screen.findByRole("button", { name: /Live2026 Open/ }));
@@ -98,7 +99,7 @@ describe("login screen", () => {
   });
 
   it("shows a not-found box under the manual field and clears it on typing", async () => {
-    denied("functions/not-found");
+    denied("not-found");
     renderApp("/");
 
     fireEvent.click(await screen.findByText("Enter a competition ID manually"));
