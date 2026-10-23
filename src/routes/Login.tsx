@@ -182,14 +182,14 @@ export default function Login() {
                       {formatRange(c.startDate, c.endDate)}
                     </span>
                   </span>
-                  {c.ongoing ? (
-                    <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/40 dark:text-green-300">
-                      Live
-                    </span>
-                  ) : pendingId === c.id ? (
+                  {pendingId === c.id ? (
                     <span className="flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500">
                       <Loader2 size={12} aria-hidden className="motion-safe:animate-spin" />
                       Checking…
+                    </span>
+                  ) : c.ongoing ? (
+                    <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/40 dark:text-green-300">
+                      Live
                     </span>
                   ) : null}
                 </button>
