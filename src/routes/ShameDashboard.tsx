@@ -1,7 +1,5 @@
 import { useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
-import { useWcif } from "../lib/useWcif";
 import { useChecks } from "../lib/useChecks";
 import {
   absencesByGroup,
@@ -15,6 +13,8 @@ import { listDays, listStages } from "../lib/wcif";
 import { initialStageId } from "../lib/selection";
 import { AbsenteeBoard } from "../components/AbsenteeBoard";
 import { DashboardSkeleton } from "../components/Skeleton";
+import { WcifGate } from "../components/WcifGate";
+import type { Wcif } from "../lib/wca";
 
 type Scope = "team" | "global";
 
@@ -35,27 +35,30 @@ function dayLabel(date: string): string {
  * only, so duties nobody has ticked yet don't pose as filled.
  */
 export default function ShameDashboard() {
-  const { competitionId } = useParams();
+  return (
+    <WcifGate skeleton={<DashboardSkeleton />}>
+      {(wcif, competitionId) => <Dashboard wcif={wcif} competitionId={competitionId} />}
+    </WcifGate>
+  );
+}
+
+function Dashboard({ wcif, competitionId }: { wcif: Wcif; competitionId: string }) {
   const { user } = useAuth();
-  const { data: wcif, isLoading, error } = useWcif(competitionId);
   const checks = useChecks(competitionId);
 
   const [scope, setScope] = useState<Scope>("team");
   const [day, setDay] = useState<string | null>(null);
 
   const myStageId = useMemo(
-    () => (wcif ? initialStageId(wcif, competitionId, user?.wcaUserId) : null),
+    () => initialStageId(wcif, competitionId, user?.wcaUserId),
     [wcif, competitionId, user],
   );
 
-  const myStageName = wcif ? listStages(wcif).find((s) => s.id === myStageId)?.name : undefined;
-  const days = wcif ? listDays(wcif) : [];
-  const effectiveDay = day ?? (wcif ? currentCompetitionDay(wcif) : null);
+  const myStageName = listStages(wcif).find((s) => s.id === myStageId)?.name;
+  const days = listDays(wcif);
+  const effectiveDay = day ?? currentCompetitionDay(wcif);
 
   const { absentees, byPerson, byGroup, byStage, overall } = useMemo(() => {
-    if (!wcif) {
-      return { absentees: [], byPerson: [], byGroup: [], byStage: [], overall: { absent: 0, total: 0 } };
-    }
     const stageId = scope === "team" ? myStageId : null;
     return {
       absentees: summarizeAbsentees(wcif, checks, stageId),
@@ -66,17 +69,6 @@ export default function ShameDashboard() {
       overall: overallAbsenceRate(wcif, checks, undefined, stageId),
     };
   }, [wcif, checks, scope, myStageId, effectiveDay]);
-
-  if (isLoading) {
-    return <DashboardSkeleton />;
-  }
-  if (!wcif) {
-    return (
-      <p className="p-6 text-center text-sm text-red-600 dark:text-red-400">
-        {error instanceof Error ? error.message : "Could not load this competition."}
-      </p>
-    );
-  }
 
   const tab = (value: Scope, label: string) => (
     <button

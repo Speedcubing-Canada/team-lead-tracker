@@ -1,6 +1,4 @@
 import { useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
-import { useWcif } from "../lib/useWcif";
 import { useChecks } from "../lib/useChecks";
 import { listDays } from "../lib/wcif";
 import {
@@ -13,6 +11,8 @@ import {
 } from "../lib/reimbursement";
 import { toCsv, toHtml, toMarkdown, triggerDownload, type ReportMeta } from "../lib/exportReport";
 import { ReimbursementSkeleton } from "../components/Skeleton";
+import { WcifGate } from "../components/WcifGate";
+import type { Wcif } from "../lib/wca";
 
 type Tone = "good" | "warn" | "bad";
 
@@ -50,34 +50,29 @@ const tierCap = (t: Tier): string => (Number.isFinite(t.maxAbsentPct) ? `≤${t.
  * tier; unrecorded (unknown) duties are shown but never counted as missed.
  */
 export default function ReimbursementExport() {
-  const { competitionId } = useParams();
-  const { data: wcif, isLoading } = useWcif(competitionId);
+  return (
+    <WcifGate skeleton={<ReimbursementSkeleton />}>
+      {(wcif, competitionId) => <Export wcif={wcif} competitionId={competitionId} />}
+    </WcifGate>
+  );
+}
+
+function Export({ wcif, competitionId }: { wcif: Wcif; competitionId: string }) {
   const checks = useChecks(competitionId);
   const [tiers, setTiers] = useState<Tier[]>(DEFAULT_TIERS);
   const [editingTiers, setEditingTiers] = useState(false);
 
-  const rows = useMemo(() => (wcif ? reimbursementByPerson(wcif, checks) : []), [wcif, checks]);
+  const rows = useMemo(() => reimbursementByPerson(wcif, checks), [wcif, checks]);
   const tally = useMemo(() => tierTally(rows, tiers), [rows, tiers]);
-  const meta: ReportMeta | null = useMemo(() => {
-    if (!wcif) return null;
-    return {
+  const meta: ReportMeta = useMemo(
+    () => ({
       competitionName: wcif.name,
       dateRange: formatDateRange(listDays(wcif)),
       generatedAt: new Date(),
       tiers,
-    };
-  }, [wcif, tiers]);
-
-  if (isLoading) {
-    return <ReimbursementSkeleton />;
-  }
-  if (!wcif || !meta) {
-    return (
-      <p className="p-6 text-center text-sm text-slate-500 dark:text-slate-400">
-        Could not load this competition.
-      </p>
-    );
-  }
+    }),
+    [wcif, tiers],
+  );
 
   const setTierCap = (i: number, value: number) =>
     setTiers((ts) => ts.map((t, j) => (j === i ? { ...t, maxAbsentPct: value } : t)));

@@ -59,4 +59,9 @@ describe("reimbursement export", () => {
     expect(csv).toContain("Bob Brown");
     expect(csv).toContain("Alice Anderson");
   });
+
+  it("says why the comp couldn't load", async () => {
+    renderApp("/c/Nope2099/reimbursement");
+    expect(await screen.findByRole("alert")).toHaveTextContent('Failed to load competition "Nope2099" (404)');
+  });
 });
