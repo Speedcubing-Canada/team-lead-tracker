@@ -15,8 +15,10 @@ export interface StoredSelection {
   savedDate: string;
 }
 
+const PREFIX = "tlt_selection_";
+
 function key(competitionId: string): string {
-  return `tlt_selection_${competitionId}`;
+  return `${PREFIX}${competitionId}`;
 }
 
 export function loadSelection(competitionId: string): StoredSelection | null {
@@ -36,6 +38,15 @@ export function saveSelection(competitionId: string, sel: StoredSelection): void
     localStorage.setItem(key(competitionId), JSON.stringify(sel));
   } catch {
     // Ignore storage failures (private mode); the choice still applies this session.
+  }
+}
+
+/** Forget every competition's selection, so the next lead on this device gets their own stage. */
+export function clearSelections(): void {
+  try {
+    for (const k of Object.keys(localStorage)) if (k.startsWith(PREFIX)) localStorage.removeItem(k);
+  } catch {
+    // Storage unavailable: nothing was saved.
   }
 }
 
