@@ -1,6 +1,6 @@
 import { alice, currentPath, renderApp } from "../test/renderApp";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { backend, checksApi } from "../test/fakeBackend";
 import { sampleWcif } from "../test/fixtures/wcif";
 
@@ -93,5 +93,21 @@ describe("stage view", () => {
 
     fireEvent.click(within(row("Bob Brown")).getByLabelText("Present"));
     await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
+  });
+
+  it("keeps the notice when a slower earlier write succeeds after a later one failed", async () => {
+    let finishFirst = () => {};
+    checksApi.writeStatus
+      .mockImplementationOnce(() => new Promise<void>((r) => (finishFirst = r)))
+      .mockRejectedValueOnce(new Error("permission-denied"));
+    renderApp(`/c/${COMP}`, { wcifs: [sampleWcif] });
+    await heading();
+
+    fireEvent.click(within(row("Bob Brown")).getByLabelText("Present"));
+    fireEvent.click(within(row("Alice Anderson")).getByLabelText("Present"));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Not saved");
+
+    await act(async () => finishFirst());
+    expect(screen.getByRole("alert")).toHaveTextContent("Not saved");
   });
 });

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { useWcif } from "../lib/useWcif";
@@ -18,13 +18,21 @@ export default function StageView() {
   const { data: wcif, isLoading, error } = useWcif(competitionId);
   const checks = useChecks(competitionId);
   const [saveFailed, setSaveFailed] = useState(false);
+  const writeSeq = useRef(0);
+  const lastFailedSeq = useRef(0);
 
   const handlers = useMemo<StageBoardHandlers>(() => {
-    const save = (write: Promise<void>) =>
-      write.then(
-        () => setSaveFailed(false),
-        () => setSaveFailed(true),
+    const save = (write: Promise<void>) => {
+      const seq = ++writeSeq.current;
+      return write.then(
+        // A slow earlier write succeeding doesn't mean a later failed one went through.
+        () => seq > lastFailedSeq.current && setSaveFailed(false),
+        () => {
+          lastFailedSeq.current = seq;
+          setSaveFailed(true);
+        },
       );
+    };
     return {
       onStatus: (activityId, registrantId, status, note) => {
         if (!competitionId || !user) return;
