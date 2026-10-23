@@ -75,7 +75,15 @@ describe("checks against the emulator", () => {
     expect(await seenByOtherLead()).toMatchObject({ status: "present", note: "on break" });
   });
 
-  it("clears the check when the status is set to null", async () => {
+  it("keeps the note as a note-only check when the status is cleared", async () => {
+    await writeStatus(COMP, 101, 5, "absent", lead, "sick");
+    await writeStatus(COMP, 101, 5, null, lead, "sick");
+    const check = await seenByOtherLead();
+    expect(check).toMatchObject({ note: "sick" });
+    expect(check).not.toHaveProperty("status");
+  });
+
+  it("deletes the check when the status is cleared without a note", async () => {
     await writeStatus(COMP, 101, 5, "present", lead);
     await writeStatus(COMP, 101, 5, null, lead);
     expect(await seenByOtherLead()).toBeUndefined();

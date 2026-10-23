@@ -1,6 +1,7 @@
 import {
   collection,
   deleteDoc,
+  deleteField,
   doc,
   onSnapshot,
   serverTimestamp,
@@ -61,9 +62,10 @@ export function subscribeToChecks(
 
 /**
  * Set (or clear) a staffer's present/absent status for a group. An optional note
- * is written in the same operation so a freshly created doc carries both — a
- * status-less check would be rejected by the security rules. Omit `note` to leave
- * any existing note untouched.
+ * is written in the same operation so a freshly created doc carries both: a
+ * status-less check needs a note to pass the security rules. Omit `note` to leave
+ * any existing note untouched. Clearing with a non-empty note keeps it as a
+ * note-only check; clearing without one deletes the check.
  */
 export async function writeStatus(
   competitionId: string,
@@ -74,14 +76,14 @@ export async function writeStatus(
   note?: string,
 ): Promise<void> {
   const ref = checkRef(competitionId, activityId, registrantId);
-  if (status === null) {
+  if (status === null && !note) {
     await deleteDoc(ref);
     return;
   }
   await setDoc(
     ref,
     {
-      status,
+      status: status ?? deleteField(),
       ...(note !== undefined ? { note } : {}),
       updatedByName: user.name,
       updatedByWcaId: user.wcaUserId,
