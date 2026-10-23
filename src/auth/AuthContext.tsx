@@ -38,7 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const wcaUserId = Number(claims["wcaUserId"]);
         setUser(
           Number.isFinite(wcaUserId)
-            ? { wcaUserId, name: String(claims["name"] ?? "Unknown") }
+            ? { wcaUserId, name: typeof claims["name"] === "string" ? claims["name"] : "Unknown" }
             : null,
         );
         setLoading(false);

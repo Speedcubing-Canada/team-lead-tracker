@@ -7,8 +7,8 @@
     "node": "22"
   },
   "scripts": {
-    "build": "tsc",
-    "build:watch": "tsc --watch",
+    "build": "tsc -p tsconfig.build.json",
+    "build:watch": "tsc -p tsconfig.build.json --watch",
     "serve": "npm run build && firebase emulators:start --only functions"
   },
   "dependencies": {
