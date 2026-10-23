@@ -61,7 +61,7 @@ describe("writeNote", () => {
       { merge: true },
     );
     // A note-only doc carries no present/absent mark.
-    expect(vi.mocked(setDoc).mock.calls[0][1]).not.toHaveProperty("status");
+    expect(vi.mocked(setDoc).mock.calls[0]![1]).not.toHaveProperty("status");
   });
 });
 

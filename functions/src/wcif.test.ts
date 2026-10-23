@@ -105,14 +105,14 @@ describe("slimWcif", () => {
   });
 
   it("preserves person roles, assignments, and avatar", () => {
-    const p = slim.persons[0];
+    const p = slim.persons[0]!;
     expect(p.roles).toEqual(["delegate"]);
     expect(p.assignments).toEqual([
       { activityId: 10, assignmentCode: "staff-judge", stationNumber: 3 },
       { activityId: 11, assignmentCode: "competitor", stationNumber: null },
     ]);
     expect(p.avatar).toEqual({ url: "https://x/full.jpg", thumbUrl: "https://x/thumb.jpg" });
-    expect(slim.persons[1].avatar).toBeNull();
+    expect(slim.persons[1]!.avatar).toBeNull();
   });
 
   it("keeps only event/round ids", () => {
@@ -120,7 +120,7 @@ describe("slimWcif", () => {
   });
 
   it("preserves the schedule down to group childActivities", () => {
-    const group = slim.schedule.venues[0].rooms[0].activities[0].childActivities[0];
+    const group = slim.schedule.venues[0]!.rooms[0]!.activities[0]!.childActivities[0]!;
     expect(group.id).toBe(1001);
     expect(group.activityCode).toBe("333-r1-g1");
     expect(group.childActivities).toEqual([]);

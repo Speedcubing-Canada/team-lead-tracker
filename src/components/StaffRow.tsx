@@ -8,7 +8,7 @@ import { Tooltip } from "./Tooltip";
 interface StaffRowProps {
   person: WcifPerson;
   station: number | null;
-  check?: CheckRecord;
+  check?: CheckRecord | undefined;
   onStatus: (status: CheckStatus | null, note?: string) => void;
   onNote: (note: string) => void;
 }

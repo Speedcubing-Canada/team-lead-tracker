@@ -10,7 +10,7 @@ import {
   type RawCompetition,
 } from "./competitions.js";
 
-const WCA_ORIGIN = process.env.WCA_ORIGIN ?? "https://www.worldcubeassociation.org";
+const WCA_ORIGIN = process.env["WCA_ORIGIN"] ?? "https://www.worldcubeassociation.org";
 
 export interface WcaIdentity {
   wcaUserId: number;

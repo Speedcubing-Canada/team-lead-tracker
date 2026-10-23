@@ -12,7 +12,7 @@ import { checkDocId, type CheckRecord } from "./checks";
 import { sampleWcif } from "../test/fixtures/wcif";
 
 const rec = (status: CheckRecord["status"], note = ""): CheckRecord => ({
-  status,
+  ...(status && { status }),
   note,
   updatedByName: "Lead",
   updatedByWcaId: 9,
@@ -35,12 +35,12 @@ describe("summarizeAbsentees", () => {
 
     expect(result.map((r) => r.person.name)).toEqual(["Bob Brown", "Dave Davis"]);
 
-    const bob = result[0];
+    const bob = result[0]!;
     expect(bob.missed).toHaveLength(2);
     expect(bob.missed.map((m) => m.groupName)).toContain("3x3 R1 · G1");
     expect(bob.missed.find((m) => m.groupName.endsWith("G1"))?.note).toBe("late");
 
-    expect(result[1].missed).toEqual([{ groupName: "4x4 R1 · G1", note: "no show" }]);
+    expect(result[1]!.missed).toEqual([{ groupName: "4x4 R1 · G1", note: "no show" }]);
   });
 
   it("returns an empty list when nobody is absent", () => {
@@ -82,7 +82,7 @@ describe("absencesByPerson", () => {
       [checkDocId(101, 2), rec("absent")], // Bob: absent on group 1
       [checkDocId(102, 2), rec("present")], // Bob: present on group 2 -> 1 of 2 marked
     ]);
-    const [bob] = absencesByPerson(sampleWcif, checks, AFTER_COMP);
+    const bob = absencesByPerson(sampleWcif, checks, AFTER_COMP)[0]!;
     expect(bob.score).toBeCloseTo(wilsonLowerBound(1, 2));
   });
 

@@ -136,8 +136,8 @@ export function StageBoard({
   handlers = NOOP_HANDLERS,
 }: {
   wcif: Wcif;
-  wcaUserId?: number;
-  competitionId?: string;
+  wcaUserId?: number | undefined;
+  competitionId?: string | undefined;
   checks?: Map<string, CheckRecord>;
   handlers?: StageBoardHandlers;
 }) {

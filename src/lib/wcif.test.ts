@@ -123,8 +123,8 @@ describe("groupsForRoom", () => {
       shortLabel: "3x3 R1 · G1",
       date: "2026-07-01",
     });
-    expect(groups[2].label).toBe("2x2x2 Cube, Round 1 · Group 1");
-    expect(groups[2].shortLabel).toBe("2x2 R1 · G1");
+    expect(groups[2]!.label).toBe("2x2x2 Cube, Round 1 · Group 1");
+    expect(groups[2]!.shortLabel).toBe("2x2 R1 · G1");
   });
 
   it("excludes groups from other rooms", () => {
@@ -215,7 +215,7 @@ describe("staffForGroup", () => {
   it("does not include a competitor assignment", () => {
     const staff = staffForGroup(sampleWcif, 201);
     expect(staff.map((s) => s.person.wcaUserId)).toEqual([1004]);
-    expect(staff[0].assignmentCode).toBe("staff-judge");
+    expect(staff[0]!.assignmentCode).toBe("staff-judge");
   });
 });
 
@@ -245,26 +245,26 @@ describe("staffByDuty", () => {
   it("groups a group's staff by duty in duty order", () => {
     const groups = staffByDuty(sampleWcif, 101);
     expect(groups.map((g) => g.assignmentCode)).toEqual(["staff-judge", "staff-scrambler"]);
-    expect(groups[0].staff.map((s) => s.person.name)).toEqual(["Alice Anderson"]);
-    expect(groups[1].staff.map((s) => s.person.name)).toEqual(["Bob Brown"]);
+    expect(groups[0]!.staff.map((s) => s.person.name)).toEqual(["Alice Anderson"]);
+    expect(groups[1]!.staff.map((s) => s.person.name)).toEqual(["Bob Brown"]);
   });
 
   it("sorts people by station number ascending (numerically, not lexically)", () => {
     // Stations 2, 3 (Alice), 10 — must come out 2, 3, 10, not 10, 2, 3.
-    const judges = staffByDuty(withJudges(judge("Zoe Zhang", 10), judge("Mona Mills", 2)), 101)[0];
+    const judges = staffByDuty(withJudges(judge("Zoe Zhang", 10), judge("Mona Mills", 2)), 101)[0]!;
     expect(judges.staff.map((s) => s.stationNumber)).toEqual([2, 3, 10]);
     expect(judges.staff.map((s) => s.person.name)).toEqual(["Mona Mills", "Alice Anderson", "Zoe Zhang"]);
   });
 
   it("sorts staff without a station last", () => {
     // Alice has station 3; the two stationless judges go after her, by name.
-    const judges = staffByDuty(withJudges(judge("Yara Young", null), judge("Xavier Xu", null)), 101)[0];
+    const judges = staffByDuty(withJudges(judge("Yara Young", null), judge("Xavier Xu", null)), 101)[0]!;
     expect(judges.staff.map((s) => s.person.name)).toEqual(["Alice Anderson", "Xavier Xu", "Yara Young"]);
   });
 
   it("uses name as a tiebreak when stations are equal", () => {
     // Alice is station 3; Adam and Beth share station 4, so they tie and sort by name.
-    const judges = staffByDuty(withJudges(judge("Beth Best", 4), judge("Adam Ash", 4)), 101)[0];
+    const judges = staffByDuty(withJudges(judge("Beth Best", 4), judge("Adam Ash", 4)), 101)[0]!;
     expect(judges.staff.map((s) => s.person.name)).toEqual(["Alice Anderson", "Adam Ash", "Beth Best"]);
   });
 
@@ -274,7 +274,7 @@ describe("staffByDuty", () => {
     const aaron = { ...judge("Aaron Abbott", null) };
     aaron.assignments = [{ activityId: 101, assignmentCode: "staff-scrambler", stationNumber: null }];
     // Group 101's scrambler in the fixture is Bob Brown (station null).
-    const scramblers = staffByDuty(withJudges(aaron), 101)[1];
+    const scramblers = staffByDuty(withJudges(aaron), 101)[1]!;
     expect(scramblers.assignmentCode).toBe("staff-scrambler");
     expect(scramblers.staff.map((s) => s.person.name)).toEqual(["Aaron Abbott", "Bob Brown"]);
   });

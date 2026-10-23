@@ -27,7 +27,6 @@ const TONE_BADGE: Record<Tone, string> = {
 
 /** Format the comp's first–last scheduled day, e.g. "Jul 1 – Jul 2, 2026". */
 function formatDateRange(days: string[]): string {
-  if (days.length === 0) return "";
   const fmt = (d: string, withYear = false) =>
     new Date(`${d}T00:00:00Z`).toLocaleDateString(undefined, {
       month: "short",
@@ -36,7 +35,8 @@ function formatDateRange(days: string[]): string {
       timeZone: "UTC",
     });
   const first = days[0];
-  const last = days[days.length - 1];
+  const last = days.at(-1);
+  if (!first || !last) return "";
   return first === last ? fmt(first, true) : `${fmt(first)} – ${fmt(last, true)}`;
 }
 

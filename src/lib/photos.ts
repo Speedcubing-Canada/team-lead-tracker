@@ -101,5 +101,5 @@ export async function fetchPrivileged(competitionId: string): Promise<boolean> {
   const uid = auth().currentUser?.uid;
   if (!uid) return false;
   const snap = await getDoc(doc(db(), `competitions/${competitionId}/members/${uid}`));
-  return snap.exists() && snap.data().privileged === true;
+  return snap.exists() && snap.data()["privileged"] === true;
 }

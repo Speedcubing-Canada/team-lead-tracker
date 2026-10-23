@@ -29,7 +29,7 @@ export interface AbsenceCount {
 /** Optional scope for the dashboard selectors: a single stage and/or a single day. */
 export interface Scope {
   /** Restrict to one stage (stage id); omit/null for the whole competition. */
-  stageId?: string | null;
+  stageId?: string | null | undefined;
   /** Restrict to one calendar day (YYYY-MM-DD); omit/null for every day. */
   date?: string | null;
 }
@@ -294,5 +294,5 @@ export function currentCompetitionDay(wcif: Wcif, now: Date = new Date()): strin
     }
   }
   const started = [...startedDates].sort();
-  return started.length > 0 ? started[started.length - 1] : days[0];
+  return started.at(-1) ?? days[0] ?? null;
 }

@@ -42,7 +42,7 @@ export interface SlimWcif {
   formatVersion: string;
   id: string;
   name: string;
-  shortName?: string;
+  shortName?: string | undefined;
   persons: SlimWcifPerson[];
   events: { id: string; rounds: { id: string }[] }[];
   schedule: {
