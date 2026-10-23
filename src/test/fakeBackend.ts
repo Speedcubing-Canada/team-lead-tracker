@@ -86,13 +86,17 @@ function upsert(
   compListeners(competitionId).forEach((l) => l());
 }
 
+const author = (user: AuthUser) => ({ updatedByName: user.name, updatedByWcaId: user.wcaUserId });
+
 export const checksApi = {
-  subscribeToChecks: vi.fn((competitionId: string, onChange: Listener<Map<string, CheckRecord>>) => {
-    const notify = () => onChange(new Map(compChecks(competitionId)));
-    compListeners(competitionId).add(notify);
-    notify();
-    return () => compListeners(competitionId).delete(notify);
-  }),
+  subscribeToChecks: vi.fn(
+    (competitionId: string, onChange: Listener<Map<string, CheckRecord>>, _onError?: Listener<Error>) => {
+      const notify = () => onChange(new Map(compChecks(competitionId)));
+      compListeners(competitionId).add(notify);
+      notify();
+      return () => compListeners(competitionId).delete(notify);
+    },
+  ),
   writeStatus: vi.fn(
     async (
       competitionId: string,
@@ -101,28 +105,16 @@ export const checksApi = {
       status: CheckStatus | null,
       user: AuthUser,
       note?: string,
-    ) =>
-      upsert(
-        competitionId,
-        activityId,
-        registrantId,
-        status === null && !note
-          ? null
-          : {
-              status,
-              ...(note !== undefined ? { note } : {}),
-              updatedByName: user.name,
-              updatedByWcaId: user.wcaUserId,
-            },
-      ),
+    ) => {
+      // Loaded per call: a top-level import would deadlock (see above).
+      const { checkWrite } = await vi.importActual<typeof import("../lib/checks")>("../lib/checks");
+      const write = checkWrite(status, note);
+      upsert(competitionId, activityId, registrantId, write && { ...write, ...author(user) });
+    },
   ),
   writeNote: vi.fn(
     async (competitionId: string, activityId: number, registrantId: number, note: string, user: AuthUser) =>
-      upsert(competitionId, activityId, registrantId, {
-        note,
-        updatedByName: user.name,
-        updatedByWcaId: user.wcaUserId,
-      }),
+      upsert(competitionId, activityId, registrantId, { note, ...author(user) }),
   ),
 };
 

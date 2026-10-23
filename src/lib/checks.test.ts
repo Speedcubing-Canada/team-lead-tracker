@@ -12,7 +12,7 @@ vi.mock("firebase/firestore", () => ({
 }));
 
 import { deleteDoc, setDoc } from "firebase/firestore";
-import { checkDocId, parseCheckDocId, toggleStatus, writeNote, writeStatus } from "./checks";
+import { checkDocId, checkWrite, parseCheckDocId, toggleStatus, writeNote, writeStatus } from "./checks";
 
 const user = { wcaUserId: 9, name: "Lead" };
 
@@ -48,6 +48,19 @@ describe("toggleStatus", () => {
   it("clears the status when the active one is tapped again", () => {
     expect(toggleStatus("present", "present")).toBeNull();
     expect(toggleStatus("absent", "absent")).toBeNull();
+  });
+});
+
+describe("checkWrite", () => {
+  it("sets the status, with the note only when given", () => {
+    expect(checkWrite("present")).toEqual({ status: "present" });
+    expect(checkWrite("absent", "late")).toEqual({ status: "absent", note: "late" });
+  });
+
+  it("keeps a note when the status is cleared, and deletes the check without one", () => {
+    expect(checkWrite(null, "sick")).toEqual({ status: null, note: "sick" });
+    expect(checkWrite(null)).toBeNull();
+    expect(checkWrite(null, "")).toBeNull();
   });
 });
 

@@ -66,12 +66,19 @@ export function subscribeToChecks(
 }
 
 /**
- * Set (or clear) a staffer's present/absent status for a group. An optional note
- * is written in the same operation so a freshly created doc carries both: a
- * status-less check needs a note to pass the security rules. Omit `note` to leave
- * any existing note untouched. Clearing with a non-empty note keeps it as a
- * note-only check; clearing without one deletes the check.
+ * What a status tap writes. A non-empty note rides along so a fresh doc carries it
+ * (a status-less check needs a note to pass the rules); clearing the status keeps it
+ * as a note-only check, or deletes the check (null) when there's no note.
  */
+export function checkWrite(
+  status: CheckStatus | null,
+  note?: string,
+): { status: CheckStatus | null; note?: string } | null {
+  if (status === null && !note) return null;
+  return { status, ...(note !== undefined ? { note } : {}) };
+}
+
+/** Set (or clear) a staffer's status for a group; omit `note` to leave any note untouched. */
 export async function writeStatus(
   competitionId: string,
   activityId: number,
@@ -81,15 +88,16 @@ export async function writeStatus(
   note?: string,
 ): Promise<void> {
   const ref = checkRef(competitionId, activityId, registrantId);
-  if (status === null && !note) {
+  const write = checkWrite(status, note);
+  if (!write) {
     await deleteDoc(ref);
     return;
   }
   await setDoc(
     ref,
     {
-      status: status ?? deleteField(),
-      ...(note !== undefined ? { note } : {}),
+      ...write,
+      status: write.status ?? deleteField(),
       updatedByName: user.name,
       updatedByWcaId: user.wcaUserId,
       updatedAt: serverTimestamp(),
