@@ -12,7 +12,7 @@
     "emulators": "FUNCTIONS_DISCOVERY_TIMEOUT=60 firebase emulators:start",
     "deploy": "npm run build && npm run test && firebase deploy --only hosting",
     "deploy:functions": "npm --prefix functions run build && FUNCTIONS_DISCOVERY_TIMEOUT=60 firebase deploy --only functions",
-    "test:int": "firebase emulators:exec --project demo-test --only firestore,storage \"vitest run --project integration\"",
+    "test:int": "firebase emulators:exec --project demo-test --only auth,firestore,storage \"vitest run --project integration\"",
     "coverage": "vitest run --project unit --project functions --coverage"
   },
   "dependencies": {

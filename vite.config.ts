@@ -29,7 +29,7 @@ export default defineConfig({
       include: ["src/**", "functions/src/**"],
       exclude: ["**/*.test.*", "src/test/**", "src/main.tsx"],
       // Ratchet: raise as coverage grows, never lower.
-      thresholds: { statements: 59, branches: 55, functions: 58, lines: 58 },
+      thresholds: { statements: 61, branches: 57, functions: 59, lines: 60 },
     },
     projects: [
       {

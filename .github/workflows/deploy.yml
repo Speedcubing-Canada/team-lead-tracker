@@ -50,6 +50,7 @@ jobs:
           path: ~/.cache/firebase/emulators
           key: firebase-emulators-${{ hashFiles('package-lock.json') }}
       - run: npm ci
+      - run: npm ci --prefix functions
       - run: npm run test:int
 
   deploy:
