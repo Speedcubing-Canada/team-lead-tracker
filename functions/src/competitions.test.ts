@@ -4,7 +4,7 @@ import {
   partitionByOngoing,
   recentPastCompetitions,
   type RawCompetition,
-} from "./competitions";
+} from "./competitions.js";
 
 const comp = (id: string, start: string, end = start): RawCompetition => ({
   id,
