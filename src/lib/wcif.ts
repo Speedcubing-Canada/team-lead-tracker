@@ -289,12 +289,12 @@ export function defaultGroupIndex(wcif: Wcif, stageId: string, now: Date = new D
   const today = dateOf(now.toISOString());
   const nowMs = now.getTime();
   let lastTodayIndex = -1;
-  for (let i = 0; i < groups.length; i++) {
-    if (groups[i].date !== today) continue;
+  for (const [i, g] of groups.entries()) {
+    if (g.date !== today) continue;
     lastTodayIndex = i;
     // Groups are start-time sorted, so the first whose end is still in the
     // future is either in progress or the next one to start.
-    if (nowMs < new Date(groups[i].activity.endTime).getTime()) return i;
+    if (nowMs < new Date(g.activity.endTime).getTime()) return i;
   }
   return lastTodayIndex >= 0 ? lastTodayIndex : 0;
 }
@@ -421,7 +421,7 @@ export function relevantStaffDay(wcif: Wcif, wcaUserId: number, today: string): 
   if (days.size === 0) return null;
 
   const sorted = [...days].sort();
-  return sorted.find((d) => d >= today) ?? sorted[sorted.length - 1];
+  return sorted.find((d) => d >= today) ?? sorted.at(-1) ?? null;
 }
 
 /**

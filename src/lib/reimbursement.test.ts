@@ -11,7 +11,7 @@ import { checkDocId, type CheckRecord } from "./checks";
 import { sampleWcif } from "../test/fixtures/wcif";
 
 const rec = (status: CheckRecord["status"], note = ""): CheckRecord => ({
-  status,
+  ...(status && { status }),
   note,
   updatedByName: "Lead",
   updatedByWcaId: 9,

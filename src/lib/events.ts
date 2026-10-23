@@ -29,7 +29,7 @@ const EVENT_SHORT_NAMES: Record<string, string> = {
 
 /** The event id portion of an activity code: the segment before the first "-". */
 export function eventIdFromActivityCode(activityCode: string): string {
-  return activityCode.split("-")[0];
+  return activityCode.split("-")[0] ?? activityCode;
 }
 
 /** Short code for a WCA event id (e.g. "333oh" → "OH"), or null when unknown. */

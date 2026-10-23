@@ -35,10 +35,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return;
         }
         const { claims } = await fbUser.getIdTokenResult();
-        const wcaUserId = Number(claims.wcaUserId);
+        const wcaUserId = Number(claims["wcaUserId"]);
         setUser(
           Number.isFinite(wcaUserId)
-            ? { wcaUserId, name: String(claims.name ?? "Unknown") }
+            ? { wcaUserId, name: String(claims["name"] ?? "Unknown") }
             : null,
         );
         setLoading(false);

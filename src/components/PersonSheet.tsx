@@ -25,8 +25,8 @@ export function PersonSheet({
   /** Resolved download URL for the uploaded photo (null if none / still resolving). */
   photoUrl?: string | null;
   canUpload?: boolean;
-  onUpload?: (file: File) => void | Promise<void>;
-  onRemove?: () => void | Promise<void>;
+  onUpload?: ((file: File) => void | Promise<void>) | undefined;
+  onRemove?: (() => void | Promise<void>) | undefined;
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);

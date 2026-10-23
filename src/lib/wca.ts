@@ -127,14 +127,14 @@ function wcaWcifUrl(competitionId: string): string {
 export async function fetchPublicWcif(competitionId: string, signal?: AbortSignal): Promise<Wcif> {
   if (!import.meta.env?.DEV) {
     try {
-      const res = await fetch(`/api/wcif/${encodeURIComponent(competitionId)}`, { signal });
+      const res = await fetch(`/api/wcif/${encodeURIComponent(competitionId)}`, { signal: signal ?? null });
       if (res.ok) return (await res.json()) as Wcif;
     } catch (err) {
       if (signal?.aborted) throw err;
       // proxy unreachable — fall through to WCA
     }
   }
-  const res = await fetch(wcaWcifUrl(competitionId), { signal });
+  const res = await fetch(wcaWcifUrl(competitionId), { signal: signal ?? null });
   if (!res.ok) {
     throw new Error(`Failed to load competition "${competitionId}" (${res.status})`);
   }

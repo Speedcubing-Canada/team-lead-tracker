@@ -56,7 +56,7 @@ describe("subscribePeoplePhotos", () => {
       },
     });
 
-    expect(received[0].get(1002)).toEqual({ photoPath: "p", uploadedByName: "A", uploadedByWcaId: 7 });
+    expect(received[0]!.get(1002)).toEqual({ photoPath: "p", uploadedByName: "A", uploadedByWcaId: 7 });
   });
 });
 

@@ -47,7 +47,7 @@ export const authWithWca = onCall(
       throw new HttpsError("invalid-argument", "code and redirectUri are required");
     }
 
-    const clientId = process.env.WCA_CLIENT_ID;
+    const clientId = process.env["WCA_CLIENT_ID"];
     if (!clientId) throw new HttpsError("failed-precondition", "WCA_CLIENT_ID is not configured");
 
     const accessToken = await exchangeCodeForToken(
@@ -81,8 +81,8 @@ export const grantCompetitionAccess = onCall(
     if (!request.auth) {
       throw new HttpsError("unauthenticated", "Sign in first");
     }
-    const wcaUserId = request.auth.token.wcaUserId as number | undefined;
-    const name = (request.auth.token.name as string | undefined) ?? "Unknown";
+    const wcaUserId = request.auth.token["wcaUserId"] as number | undefined;
+    const name = (request.auth.token["name"] as string | undefined) ?? "Unknown";
     if (typeof wcaUserId !== "number") {
       throw new HttpsError("permission-denied", "Missing WCA identity claim");
     }
@@ -110,8 +110,8 @@ export const grantCompetitionAccess = onCall(
     // force-refreshes its ID token after this call so the claims take effect.
     const auth = getAuth();
     const existing = (await auth.getUser(request.auth.uid)).customClaims ?? {};
-    const comps: Record<string, true> = { ...(existing.comps ?? {}), [competitionId]: true };
-    const privilegedComps: Record<string, true> = { ...(existing.privilegedComps ?? {}) };
+    const comps: Record<string, true> = { ...(existing["comps"] ?? {}), [competitionId]: true };
+    const privilegedComps: Record<string, true> = { ...(existing["privilegedComps"] ?? {}) };
     if (privileged) privilegedComps[competitionId] = true;
     else delete privilegedComps[competitionId];
     await auth.setCustomUserClaims(request.auth.uid, { ...existing, comps, privilegedComps });

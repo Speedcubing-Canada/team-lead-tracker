@@ -88,7 +88,7 @@ function TabLink({
   to,
   label,
   Icon,
-  end,
+  end = false,
 }: {
   to: string;
   label: string;
