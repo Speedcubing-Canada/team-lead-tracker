@@ -7,18 +7,12 @@ const COMP = "TestComp2026";
 const PATH = `competitions/${COMP}/people/42.jpg`;
 const JPEG = { contentType: "image/jpeg" };
 
-const { env, contextFor } = useEmulator(COMP);
+const { seedObject, contextFor } = useEmulator(COMP);
 
-beforeEach(() =>
-  env().withSecurityRulesDisabled(async (ctx) => {
-    await uploadBytes(ref(ctx.storage(), PATH), new Uint8Array([1, 2, 3]), JPEG);
-  }),
-);
+beforeEach(() => seedObject(PATH, new Uint8Array([1, 2, 3])));
 
 const member = () => contextFor(LEAD.uid).storage();
 const privileged = () => contextFor(DELEGATE.uid).storage();
-const as = (claims?: Record<string, unknown>) =>
-  claims ? env().authenticatedContext("u", claims).storage() : env().unauthenticatedContext().storage();
 
 describe("person photos", () => {
   it("lets a member read", async () => {
@@ -44,9 +38,9 @@ describe("person photos", () => {
 
   it("denies tokens without claims, other comps' claims, and signed-out users", async () => {
     for (const storage of [
-      as({}),
-      as({ comps: { OtherComp: true }, privilegedComps: { OtherComp: true } }),
-      as(),
+      contextFor("outsider").storage(),
+      contextFor("u", { comps: { OtherComp: true }, privilegedComps: { OtherComp: true } }).storage(),
+      contextFor(null).storage(),
     ]) {
       await assertFails(getBytes(ref(storage, PATH)));
       await assertFails(uploadBytes(ref(storage, PATH), new Uint8Array(8), JPEG));

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getBytes, ref } from "firebase/storage";
 import { DELEGATE, LEAD, firstValue, useEmulator } from "../test/emulator";
-import { storage } from "../test/emulatorFirebase";
+import { storage } from "./firebase";
 import {
   fetchPrivileged,
   removePersonPhoto,

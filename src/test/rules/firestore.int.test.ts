@@ -7,12 +7,12 @@ const COMP = "TestComp2026";
 const CHECK = `competitions/${COMP}/checks/101_5`;
 const PERSON = `competitions/${COMP}/people/42`;
 
-const { env, seed, contextFor } = useEmulator(COMP);
+const { seed, contextFor } = useEmulator(COMP);
 
 const lead = () => contextFor(LEAD.uid).firestore();
 const delegate = () => contextFor(DELEGATE.uid).firestore();
 const outsider = () => contextFor("outsider").firestore();
-const anon = () => env().unauthenticatedContext().firestore();
+const anon = () => contextFor(null).firestore();
 
 const mark = (status: string) => ({ status, updatedByWcaId: 1, updatedByName: "Lead" });
 
@@ -59,15 +59,11 @@ describe("checks", () => {
     await assertFails(setDoc(doc(lead(), CHECK), { ...mark("present"), note: 5 }));
   });
 
-  it("rejects a check attributed to another WCA user", async () => {
-    await assertFails(setDoc(doc(lead(), CHECK), { ...mark("present"), updatedByWcaId: 2 }));
-    await assertFails(setDoc(doc(lead(), CHECK), { note: "x", updatedByWcaId: 2 }));
-  });
-
-  it("rejects a write without an int updatedByWcaId", async () => {
+  it("rejects a check not attributed to the caller's WCA id", async () => {
     await assertFails(setDoc(doc(lead(), CHECK), { status: "present" }));
-    await assertFails(setDoc(doc(lead(), CHECK), { status: "present", updatedByWcaId: "1" }));
-    await assertFails(setDoc(doc(lead(), CHECK), { note: "x", updatedByWcaId: 1.5 }));
+    await assertFails(setDoc(doc(lead(), CHECK), { ...mark("present"), updatedByWcaId: 2 }));
+    await assertFails(setDoc(doc(lead(), CHECK), { ...mark("present"), updatedByWcaId: "1" }));
+    await assertFails(setDoc(doc(lead(), CHECK), { note: "x", updatedByWcaId: 2 }));
   });
 
   it("rejects a write with neither a status nor a string note", async () => {
@@ -122,13 +118,13 @@ describe("people photos", () => {
     await assertSucceeds(deleteDoc(doc(delegate(), PERSON)));
   });
 
-  it("rejects malformed photo metadata", async () => {
-    await assertFails(setDoc(doc(delegate(), PERSON), { photoPath: 1, uploadedByWcaId: 2 }));
-    await assertFails(setDoc(doc(delegate(), PERSON), { photoPath: "p", uploadedByWcaId: "2" }));
+  it("rejects a photo path that isn't a string", async () => {
+    await assertFails(setDoc(doc(delegate(), PERSON), { ...photo, photoPath: 1 }));
   });
 
-  it("rejects photo metadata attributed to another WCA user", async () => {
+  it("rejects photo metadata not attributed to the caller's WCA id", async () => {
     await assertFails(setDoc(doc(delegate(), PERSON), { ...photo, uploadedByWcaId: 1 }));
+    await assertFails(setDoc(doc(delegate(), PERSON), { ...photo, uploadedByWcaId: "2" }));
   });
 
   it("lets any member read, but only privileged members write", async () => {
