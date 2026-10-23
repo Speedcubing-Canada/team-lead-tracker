@@ -51,13 +51,18 @@ function checkRef(competitionId: string, activityId: number, registrantId: numbe
 export function subscribeToChecks(
   competitionId: string,
   onChange: (checks: Map<string, CheckRecord>) => void,
+  onError?: (err: Error) => void,
 ): () => void {
   const ref = collection(db(), `competitions/${competitionId}/checks`);
-  return onSnapshot(ref, (snap) => {
-    const map = new Map<string, CheckRecord>();
-    snap.forEach((d) => map.set(d.id, d.data() as CheckRecord));
-    onChange(map);
-  });
+  return onSnapshot(
+    ref,
+    (snap) => {
+      const map = new Map<string, CheckRecord>();
+      snap.forEach((d) => map.set(d.id, d.data() as CheckRecord));
+      onChange(map);
+    },
+    onError,
+  );
 }
 
 /**

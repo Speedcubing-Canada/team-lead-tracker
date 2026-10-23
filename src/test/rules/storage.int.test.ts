@@ -1,40 +1,24 @@
-import { readFileSync } from "node:fs";
-import { afterAll, beforeAll, beforeEach, describe, it } from "vitest";
-import {
-  assertFails,
-  assertSucceeds,
-  initializeTestEnvironment,
-  type RulesTestEnvironment,
-} from "@firebase/rules-unit-testing";
+import { beforeEach, describe, it } from "vitest";
+import { assertFails, assertSucceeds } from "@firebase/rules-unit-testing";
 import { deleteObject, getBytes, ref, uploadBytes } from "firebase/storage";
+import { DELEGATE, LEAD, useEmulator } from "../emulator";
 
 const COMP = "TestComp2026";
 const PATH = `competitions/${COMP}/people/42.jpg`;
 const JPEG = { contentType: "image/jpeg" };
 
-let env: RulesTestEnvironment;
+const { env, contextFor } = useEmulator(COMP);
 
-beforeAll(async () => {
-  env = await initializeTestEnvironment({
-    projectId: "demo-test",
-    storage: { rules: readFileSync("storage.rules", "utf8") },
-  });
-});
-
-afterAll(() => env.cleanup());
-
-beforeEach(async () => {
-  await env.clearStorage();
-  await env.withSecurityRulesDisabled(async (ctx) => {
+beforeEach(() =>
+  env().withSecurityRulesDisabled(async (ctx) => {
     await uploadBytes(ref(ctx.storage(), PATH), new Uint8Array([1, 2, 3]), JPEG);
-  });
-});
+  }),
+);
 
+const member = () => contextFor(LEAD.uid).storage();
+const privileged = () => contextFor(DELEGATE.uid).storage();
 const as = (claims?: Record<string, unknown>) =>
-  claims ? env.authenticatedContext("u", claims).storage() : env.unauthenticatedContext().storage();
-
-const member = () => as({ comps: { [COMP]: true } });
-const privileged = () => as({ comps: { [COMP]: true }, privilegedComps: { [COMP]: true } });
+  claims ? env().authenticatedContext("u", claims).storage() : env().unauthenticatedContext().storage();
 
 describe("person photos", () => {
   it("lets a member read", async () => {

@@ -42,13 +42,18 @@ function metaRef(competitionId: string, wcaUserId: number) {
 export function subscribePeoplePhotos(
   competitionId: string,
   onChange: (photos: Map<number, PersonPhoto>) => void,
+  onError?: (err: Error) => void,
 ): () => void {
   const colRef = collection(db(), `competitions/${competitionId}/people`);
-  return onSnapshot(colRef, (snap) => {
-    const map = new Map<number, PersonPhoto>();
-    snap.forEach((d) => map.set(Number(d.id), d.data() as PersonPhoto));
-    onChange(map);
-  });
+  return onSnapshot(
+    colRef,
+    (snap) => {
+      const map = new Map<number, PersonPhoto>();
+      snap.forEach((d) => map.set(Number(d.id), d.data() as PersonPhoto));
+      onChange(map);
+    },
+    onError,
+  );
 }
 
 /** Resize the picked image, upload it, then record metadata for live sync. */
