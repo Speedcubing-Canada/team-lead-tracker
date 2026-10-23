@@ -1,4 +1,4 @@
-import { COMP, COMP_NAME, USERS } from "./fakeWca";
+import { COMP, COMP_NAME, FAKE_WCA, USERS } from "./fakeWca";
 import { expect, loginAs, openComp, test } from "./fixtures";
 
 test("a staff lead logs in, opens their comp and lands on the stage they staff", async ({ page }) => {
@@ -25,10 +25,10 @@ test("the session survives a reload", async ({ page }) => {
 test.describe("on a phone set to a timezone far from the venue", () => {
   test.use({ timezoneId: "Pacific/Auckland" });
 
-  test("the board opens on the group running now at the venue", async ({ page }) => {
-    // Red's 3x3 group 2 runs 13:30-14:00 UTC on day 1 (today, in the fake WCA).
-    const today = new Date().toISOString().slice(0, 10);
-    await page.clock.setFixedTime(new Date(`${today}T13:45:00Z`));
+  test("the board opens on the group running now at the venue", async ({ page, request }) => {
+    // Red's 3x3 group 2 runs 13:30-14:00 UTC on day 1.
+    const wcif = await (await request.get(`${FAKE_WCA}/api/v0/competitions/${COMP}/wcif/public`)).json();
+    await page.clock.setFixedTime(new Date(`${wcif.schedule.startDate}T13:45:00Z`));
     await openComp(page, USERS.bob);
     await expect(page.getByLabel("Group", { exact: true }).locator("option:checked")).toHaveText(/2/);
     await expect(page.getByText("Group 2 of 3")).toBeVisible();

@@ -1,9 +1,9 @@
 import { USERS } from "./fakeWca";
-import { expect, firstGroup, newLead, openComp, pressed, row, test } from "./fixtures";
+import { expect, firstGroup, openComp, pressed, row, test } from "./fixtures";
 
-test("two leads on the same stage see each other's marks and notes live", async ({ page, browser }) => {
+test("two leads on the same stage see each other's marks and notes live", async ({ page, secondLead }) => {
   await openComp(page, USERS.bob);
-  const alice = await newLead(browser, USERS.alice);
+  const alice = await secondLead(USERS.alice);
   await firstGroup(page);
   await firstGroup(alice);
 
@@ -19,12 +19,11 @@ test("two leads on the same stage see each other's marks and notes live", async 
   await alice.getByLabel("Stage").focus();
   await expect(row(page, "Bob Brown").getByRole("textbox")).toHaveValue("not answering phone");
 
-  await alice.context().close();
 });
 
-test("a mark made while the wifi is down reaches the other lead once it's back", async ({ page, browser }) => {
+test("a mark made while the wifi is down reaches the other lead once it's back", async ({ page, secondLead }) => {
   await openComp(page, USERS.bob);
-  const alice = await newLead(browser, USERS.alice);
+  const alice = await secondLead(USERS.alice);
   await firstGroup(page);
   await firstGroup(alice);
 
@@ -35,5 +34,4 @@ test("a mark made while the wifi is down reaches the other lead once it's back",
 
   await pressed(alice, "Alice Anderson", "Absent");
   await expect(page.getByText("Not saved")).toBeHidden();
-  await alice.context().close();
 });

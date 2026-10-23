@@ -1,10 +1,11 @@
-import { test as base, devices, expect, type Browser, type Page } from "@playwright/test";
-import { COMP_NAME, FAKE_WCA, USER_COOKIE } from "./fakeWca";
+import { test as base, devices, expect, type APIRequestContext, type BrowserContext, type Page } from "@playwright/test";
+import { COMP, COMP_NAME, FAKE_WCA, USER_COOKIE } from "./fakeWca";
 
 const PROJECT = "demo-e2e";
+const FIRESTORE = `http://127.0.0.1:8080/v1/projects/${PROJECT}/databases/(default)/documents`;
 
-/** Every test starts from empty emulators; specs share them, so they run one at a time. */
-export const test = base.extend<{ resetEmulators: void }>({
+export const test = base.extend<{ resetEmulators: void; secondLead: (wcaUserId: number) => Promise<Page> }>({
+  /** Every test starts from empty emulators; specs share them, so they run one at a time. */
   resetEmulators: [
     async ({ request }, use) => {
       for (const url of [
@@ -17,6 +18,18 @@ export const test = base.extend<{ resetEmulators: void }>({
     },
     { auto: true },
   ],
+  /** Another lead on their own phone, opened on the fake comp. */
+  secondLead: async ({ browser, baseURL }, use) => {
+    const contexts: BrowserContext[] = [];
+    await use(async (wcaUserId) => {
+      const context = await browser.newContext({ ...devices["Pixel 7"], baseURL: baseURL! });
+      contexts.push(context);
+      const page = await context.newPage();
+      await openComp(page, wcaUserId);
+      return page;
+    });
+    await Promise.all(contexts.map((c) => c.close()));
+  },
 });
 
 export { expect };
@@ -42,13 +55,23 @@ export async function openComp(page: Page, wcaUserId: number) {
   await expect(page.getByLabel("Stage")).toBeVisible();
 }
 
-/** A second lead on their own phone. */
-export async function newLead(browser: Browser, wcaUserId: number): Promise<Page> {
-  const context = await browser.newContext({ ...devices["Pixel 7"], baseURL: test.info().project.use.baseURL! });
-  const other = await context.newPage();
-  await openComp(other, wcaUserId);
-  return other;
+type StoredCheck = { status?: string | undefined; note?: string | undefined };
+
+async function storedChecks(request: APIRequestContext): Promise<StoredCheck[]> {
+  const res = await request.get(`${FIRESTORE}/competitions/${COMP}/checks`, {
+    headers: { Authorization: "Bearer owner" },
+  });
+  const { documents = [] } = (await res.json()) as {
+    documents?: { fields: Record<string, { stringValue?: string }> }[];
+  };
+  return documents.map((d) => ({ status: d.fields["status"]?.stringValue, note: d.fields["note"]?.stringValue }));
 }
+
+/** Wait until the emulator holds these checks: the page shows a write before Firestore commits it. */
+export const saved = (request: APIRequestContext, ...checks: StoredCheck[]) =>
+  expect
+    .poll(() => storedChecks(request))
+    .toEqual(expect.arrayContaining(checks.map((c) => expect.objectContaining(c))));
 
 /** The staff row for a person in the current group. */
 export const row = (page: Page, name: string) => page.getByRole("listitem").filter({ hasText: name });

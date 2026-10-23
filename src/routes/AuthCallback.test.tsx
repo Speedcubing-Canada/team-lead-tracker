@@ -4,6 +4,7 @@ import { FunctionsError } from "firebase/functions";
 import { fireEvent, screen } from "@testing-library/react";
 import { authWithWca } from "../lib/authApi";
 import { loadMyCompetitions } from "../lib/myCompetitions";
+import { loadSelection, saveSelection } from "../lib/selection";
 import { OAUTH_STATE_KEY as STATE_KEY } from "../auth/AuthContext";
 
 const comps = [{ id: "Live2026", name: "Live Open", startDate: "2026-07-09", endDate: "2099-07-11", ongoing: true }];
@@ -26,6 +27,19 @@ describe("OAuth callback", () => {
     expect(screen.getByRole("button", { name: /Live Open/ })).toBeInTheDocument();
     expect(authWithWca).toHaveBeenCalledWith("c1", `${window.location.origin}/auth/callback`);
     expect(loadMyCompetitions()).toEqual(comps);
+  });
+
+  it("forgets the previous lead's stage, even if they never signed out", async () => {
+    saveSelection("Live2026", { stageId: "Blue", groupActivityId: 1, savedDate: "2026-07-10" });
+    sessionStorage.setItem(STATE_KEY, "s1");
+    vi.mocked(authWithWca).mockResolvedValue({
+      token: token({ wcaUserId: 1001, name: "Alice Anderson" }),
+      competitions: comps,
+    });
+    callback("code=c1&state=s1");
+
+    expect(await screen.findByText("Signed in as Alice Anderson")).toBeInTheDocument();
+    expect(loadSelection("Live2026")).toBeNull();
   });
 
   it("reports a cancelled WCA login", async () => {

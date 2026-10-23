@@ -32,7 +32,7 @@ function addDays(date: string, days: number): string {
 }
 
 /** The sample comp moved so day 1 is today (UTC), so it's live for both the browser and the functions. */
-export function wcifToday(): Wcif {
+function wcifToday(): Wcif {
   const wcif = structuredClone(sampleWcif);
   const offset = Date.parse(today()) - Date.parse(wcif.schedule.startDate);
   const shift = (iso: string) => new Date(Date.parse(iso) + offset).toISOString();
@@ -81,12 +81,12 @@ async function readBody(req: IncomingMessage): Promise<string> {
 }
 
 /** "token-1002" → the person with wcaUserId 1002. */
-function personFor(token: string | undefined) {
+function personFor(wcif: Wcif, token: string | undefined) {
   const id = Number(token?.split("-")[1]);
-  return wcifToday().persons.find((p) => p.wcaUserId === id);
+  return wcif.persons.find((p) => p.wcaUserId === id);
 }
 
-async function handle(req: IncomingMessage, res: ServerResponse) {
+async function handle(wcif: Wcif, req: IncomingMessage, res: ServerResponse) {
   const url = new URL(req.url ?? "/", FAKE_WCA);
   if (req.method === "OPTIONS") return send(res, 204);
 
@@ -104,7 +104,7 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
     return send(res, 200, { access_token: code.replace("code-", "token-") });
   }
 
-  const person = personFor(req.headers.authorization?.replace("Bearer ", ""));
+  const person = personFor(wcif, req.headers.authorization?.replace("Bearer ", ""));
   if (url.pathname === "/api/v0/me") {
     if (!person) return send(res, 401, { error: "unauthorized" });
     return send(res, 200, { me: { id: person.wcaUserId, name: person.name } });
@@ -113,12 +113,12 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
     if (!person) return send(res, 401, { error: "unauthorized" });
     return send(res, 200, {
       future_competitions: [
-        { id: COMP, name: COMP_NAME, start_date: today(), end_date: addDays(today(), 1) },
+        { id: COMP, name: COMP_NAME, start_date: wcif.schedule.startDate, end_date: addDays(wcif.schedule.startDate, 1) },
       ],
       past_competitions: [],
     });
   }
-  if (url.pathname === `/api/v0/competitions/${COMP}/wcif/public`) return send(res, 200, wcifToday());
+  if (url.pathname === `/api/v0/competitions/${COMP}/wcif/public`) return send(res, 200, wcif);
   if (/^\/api\/v0\/competitions\/[^/]+\/wcif\/public$/.test(url.pathname)) {
     return send(res, 404, { error: "Competition not found" });
   }
@@ -126,8 +126,10 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
 }
 
 export function startFakeWca(): Promise<Server> {
+  // Built once so a run crossing UTC midnight keeps one schedule.
+  const wcif = wcifToday();
   const server = createServer((req, res) => {
-    handle(req, res).catch((err) => send(res, 500, { error: String(err) }));
+    handle(wcif, req, res).catch((err) => send(res, 500, { error: String(err) }));
   });
   return new Promise((resolve, reject) => {
     server.once("error", reject).listen(FAKE_WCA_PORT, "127.0.0.1", () => resolve(server));
