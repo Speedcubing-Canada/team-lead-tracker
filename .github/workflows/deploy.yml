@@ -38,6 +38,7 @@ jobs:
       - run: npm ci --prefix functions   # root vitest also runs functions/ tests
       - run: npm run coverage            # every test project, inside the emulators
       - run: npm run build
+      - run: npm --prefix functions run build
 
   deploy:
     name: Deploy → Production
@@ -76,8 +77,12 @@ jobs:
             exit $code
           fi
 
-      - name: Deploy Firestore and Storage rules
-        run: npx firebase-tools@15.22.3 deploy --only firestore:rules,storage --project team-lead-tracker --non-interactive
+      - name: Deploy Firestore rules
+        run: npx firebase-tools@15.22.3 deploy --only firestore:rules --project team-lead-tracker --non-interactive
+
+      # Its own step, so a Storage permission gap can't hold back the Firestore rules.
+      - name: Deploy Storage rules
+        run: npx firebase-tools@15.22.3 deploy --only storage --project team-lead-tracker --non-interactive
 
       # Functions deploys cost Cloud Build + Artifact Registry; skip unless functions/
       # changed since the last successful deploy (compared to it, not the push's `before`,
