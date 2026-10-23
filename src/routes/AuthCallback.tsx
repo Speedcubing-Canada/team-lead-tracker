@@ -42,8 +42,10 @@ export default function AuthCallback() {
         await signInWithCustomToken(auth(), token);
         navigate("/", { replace: true });
       } catch (e) {
+        // "internal" covers both an unreachable server and a crash in the function.
+        const internal = (e as { code?: string } | null)?.code === "functions/internal";
         const msg = e instanceof Error ? e.message : "";
-        setError(msg && msg !== "internal" ? msg : "Login failed. Is the server reachable?");
+        setError(msg && !internal ? msg : "Login failed. Is the server reachable?");
       }
     })();
   }, [params, navigate]);

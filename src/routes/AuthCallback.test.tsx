@@ -1,5 +1,6 @@
 import { renderApp } from "../test/renderApp";
 import { describe, expect, it, vi } from "vitest";
+import { FunctionsError } from "firebase/functions";
 import { fireEvent, screen } from "@testing-library/react";
 import { authWithWca } from "../lib/authApi";
 import { loadMyCompetitions } from "../lib/myCompetitions";
@@ -47,14 +48,16 @@ describe("OAuth callback", () => {
 
   it("shows the server's reason for a failed login", async () => {
     sessionStorage.setItem(STATE_KEY, "s1");
-    vi.mocked(authWithWca).mockRejectedValue(new Error("WCA token exchange failed (401)"));
+    vi.mocked(authWithWca).mockRejectedValue(
+      new FunctionsError("invalid-argument", "code and redirectUri are required"),
+    );
     callback("code=c1&state=s1");
-    expect(await screen.findByText("WCA token exchange failed (401)")).toBeInTheDocument();
+    expect(await screen.findByText("code and redirectUri are required")).toBeInTheDocument();
   });
 
-  it("maps a bare 'internal' error to a reachability hint, with a way back", async () => {
+  it("maps an internal error (crash or unreachable) to a reachability hint, with a way back", async () => {
     sessionStorage.setItem(STATE_KEY, "s1");
-    vi.mocked(authWithWca).mockRejectedValue(new Error("internal"));
+    vi.mocked(authWithWca).mockRejectedValue(new FunctionsError("internal", "INTERNAL"));
     callback("code=c1&state=s1");
 
     expect(await screen.findByText("Login failed. Is the server reachable?")).toBeInTheDocument();
