@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { CircleAlert, FileDown, Loader2, LogIn, LogOut } from "lucide-react";
+import { FileDown, Loader2, LogIn, LogOut } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
 import { auth } from "../lib/firebase";
 import { grantCompetitionAccess } from "../lib/authApi";
@@ -9,6 +9,7 @@ import { loadMyCompetitions } from "../lib/myCompetitions";
 import { hasCheckData, recentlyEndedComps, upcomingComps } from "../lib/recentComps";
 import type { MyCompetition } from "../lib/wca";
 import { ThemeToggle } from "../components/ThemeToggle";
+import { ErrorNotice } from "../components/ErrorNotice";
 import { CompListSkeleton } from "../components/Skeleton";
 
 function formatRange(startDate: string, endDate: string): string {
@@ -32,22 +33,6 @@ function describeOpenError(err: unknown): Omit<OpenError, "source"> {
     return { title: "No access", body: err.message };
   }
   return { title: "Couldn't open this competition", body: "Check your connection and try again." };
-}
-
-function ErrorNotice({ id, title, body }: { id?: string; title: string; body: string }) {
-  return (
-    <div
-      id={id}
-      role="alert"
-      className="flex gap-2.5 rounded-xl border border-red-200 bg-red-50 px-3.5 py-3 dark:border-red-900/60 dark:bg-red-950/40"
-    >
-      <CircleAlert size={18} aria-hidden className="mt-0.5 shrink-0 text-red-600 dark:text-red-400" />
-      <div>
-        <p className="text-sm font-semibold text-red-800 dark:text-red-200">{title}</p>
-        <p className="text-sm text-red-700 dark:text-red-300">{body}</p>
-      </div>
-    </div>
-  );
 }
 
 /**
