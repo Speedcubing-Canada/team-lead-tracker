@@ -75,6 +75,24 @@ describe("listDays", () => {
   });
 });
 
+describe("venue-local dates", () => {
+  // Red Stage group 2 moved to 8:30pm Toronto time on Jul 1, which is already Jul 2 in UTC.
+  const evening: Wcif = structuredClone(sampleWcif);
+  const group2 = evening.schedule.venues[0]!.rooms[0]!.activities[0]!.childActivities[1]!;
+  group2.startTime = "2026-07-02T00:30:00Z";
+  group2.endTime = "2026-07-02T01:00:00Z";
+
+  it("dates an evening group on the venue's calendar day", () => {
+    expect(groupsForStage(evening, "1").find((g) => g.activity.id === 102)?.date).toBe("2026-07-01");
+  });
+
+  it("lands on tonight's group once the afternoon group has ended", () => {
+    // 6pm in Toronto: group 1 is over, group 2 starts at 8:30pm.
+    const idx = defaultGroupIndex(evening, "1", new Date("2026-07-01T22:00:00Z"));
+    expect(groupsForStage(evening, "1")[idx]?.activity.id).toBe(102);
+  });
+});
+
 describe("roomIdForActivity", () => {
   it("maps a group activity back to its room", () => {
     expect(roomIdForActivity(sampleWcif, 101)).toBe(1);
