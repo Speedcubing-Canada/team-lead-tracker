@@ -34,13 +34,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setLoading(false);
           return;
         }
-        const { claims } = await fbUser.getIdTokenResult();
-        const wcaUserId = Number(claims["wcaUserId"]);
-        setUser(
-          Number.isFinite(wcaUserId)
-            ? { wcaUserId, name: String(claims["name"] ?? "Unknown") }
-            : null,
-        );
+        try {
+          const { claims } = await fbUser.getIdTokenResult();
+          const wcaUserId = Number(claims["wcaUserId"]);
+          setUser(
+            Number.isFinite(wcaUserId)
+              ? { wcaUserId, name: String(claims["name"] ?? "Unknown") }
+              : null,
+          );
+        } catch {
+          setUser(null);
+        }
         setLoading(false);
       });
     } catch {
