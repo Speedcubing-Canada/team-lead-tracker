@@ -67,8 +67,8 @@ export default defineConfig({
         test: {
           name: "integration",
           environment: "node",
+          setupFiles: ["./src/test/emulatorGuard.ts"],
           include: ["**/*.int.test.ts"],
-          exclude: ["**/node_modules/**"],
           fileParallelism: false,
         },
       },
