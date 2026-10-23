@@ -26,7 +26,8 @@ export function AppShell() {
 
   useEffect(() => {
     if (!competitionId || !user) return;
-    const unsub = subscribePeoplePhotos(competitionId, setPhotos);
+    // Photos are optional: on a denied or failed listener, fall back to WCA avatars.
+    const unsub = subscribePeoplePhotos(competitionId, setPhotos, () => setPhotos(new Map()));
     let active = true;
     fetchPrivileged(competitionId)
       .then((p) => {

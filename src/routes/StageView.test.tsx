@@ -95,6 +95,16 @@ describe("stage view", () => {
     expect(await heading()).toHaveTextContent("3x3x3 Cube, Round 1 · Group 1");
   });
 
+  it("tells the lead when live marks stop syncing", async () => {
+    checksApi.subscribeToChecks.mockImplementationOnce((_comp, _onChange, onError) => {
+      onError?.(Object.assign(new Error("Missing or insufficient permissions."), { code: "permission-denied" }));
+      return () => {};
+    });
+    renderApp(`/c/${COMP}`, { wcifs: [sampleWcif] });
+    await heading();
+    expect(await screen.findByRole("alert")).toHaveTextContent("Live marks stopped");
+  });
+
   it("tells the lead when a mark fails to save", async () => {
     checksApi.writeStatus.mockRejectedValueOnce(
       Object.assign(new Error("Missing or insufficient permissions."), { code: "permission-denied" }),
