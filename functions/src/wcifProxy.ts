@@ -10,7 +10,7 @@ export interface ProxyResponse {
 
 const JSON_TYPE = "application/json; charset=utf-8";
 
-const error = (status: number, message: string): ProxyResponse => ({
+const errorResponse = (status: number, message: string): ProxyResponse => ({
   status,
   headers: { "Content-Type": JSON_TYPE },
   body: JSON.stringify({ error: message }),
@@ -22,14 +22,14 @@ const error = (status: number, message: string): ProxyResponse => ({
  */
 export async function wcifResponse(path: string, acceptEncoding: string): Promise<ProxyResponse> {
   const competitionId = path.split("/").filter(Boolean).pop();
-  if (!competitionId) return error(400, "Missing competition id");
+  if (!competitionId) return errorResponse(400, "Missing competition id");
 
   let body: string;
   try {
     body = JSON.stringify(await fetchPublicWcif(decodeURIComponent(competitionId)));
   } catch (err) {
-    if (err instanceof HttpsError && err.code === "not-found") return error(404, err.message);
-    return error(502, `Failed to load competition "${competitionId}"`);
+    if (err instanceof HttpsError && err.code === "not-found") return errorResponse(404, err.message);
+    return errorResponse(502, `Failed to load competition "${competitionId}"`);
   }
 
   const headers = {

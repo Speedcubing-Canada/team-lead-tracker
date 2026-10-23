@@ -1,7 +1,6 @@
 /**
- * Server-side copy of the access rule. Mirrors `canAccessCompetition` in
- * `src/lib/wcif.ts` (kept in sync deliberately — the Cloud Functions package is
- * bundled independently and cannot import from the web app's source tree).
+ * Who may use a competition's tracker. Imported by `src/test` too, so keep it free of
+ * imports that only resolve inside functions/.
  */
 
 export interface AccessWcif {
@@ -34,6 +33,11 @@ export function isPrivileged(wcif: AccessWcif, wcaUserId: number): boolean {
 
 type CompClaims = Record<string, true>;
 
+export type AccessClaims = Record<string, unknown> & {
+  comps: CompClaims;
+  privilegedComps: CompClaims;
+};
+
 /** Firebase rejects custom claims over 1000 bytes, so only the newest comps are kept. */
 export const MAX_CLAIMED_COMPS = 8;
 
@@ -45,7 +49,7 @@ export function mergeAccessClaims(
   existing: Record<string, unknown>,
   competitionId: string,
   privileged: boolean,
-): Record<string, unknown> {
+): AccessClaims {
   const { [competitionId]: _, ...others } = (existing["comps"] ?? {}) as CompClaims;
   const ids = [...Object.keys(others), competitionId].slice(-MAX_CLAIMED_COMPS);
   const oldPrivileged = (existing["privilegedComps"] ?? {}) as CompClaims;

@@ -94,7 +94,9 @@ export const checksApi = {
       const notify = () => onChange(new Map(compChecks(competitionId)));
       compListeners(competitionId).add(notify);
       notify();
-      return () => compListeners(competitionId).delete(notify);
+      return () => {
+        compListeners(competitionId).delete(notify);
+      };
     },
   ),
   writeStatus: vi.fn(

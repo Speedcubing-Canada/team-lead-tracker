@@ -63,15 +63,15 @@ describe("mergeAccessClaims", () => {
   });
 
   it("keeps only the newest comps, re-granting one as newest", () => {
-    let claims: Record<string, unknown> = {};
-    for (let i = 0; i < MAX_CLAIMED_COMPS + 2; i++) claims = mergeAccessClaims(claims, `C${i}`, true);
+    let claims = mergeAccessClaims({}, "C0", true);
+    for (let i = 1; i < MAX_CLAIMED_COMPS + 2; i++) claims = mergeAccessClaims(claims, `C${i}`, true);
     claims = mergeAccessClaims(claims, "C2", true);
 
-    const comps = Object.keys(claims["comps"] as object);
+    const comps = Object.keys(claims.comps);
     expect(comps).toHaveLength(MAX_CLAIMED_COMPS);
     expect(comps.at(-1)).toBe("C2");
     expect(comps).not.toContain("C0");
-    expect(Object.keys(claims["privilegedComps"] as object)).toEqual(comps);
+    expect(Object.keys(claims.privilegedComps)).toEqual(comps);
   });
 
   it("stays under Firebase's 1000-byte claims limit with max-length WCA ids", () => {

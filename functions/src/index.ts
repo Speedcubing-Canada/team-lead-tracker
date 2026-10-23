@@ -1,14 +1,12 @@
 /**
  * Cloud Functions for WCA-gated access.
  *
- * authWithWca: exchanges a WCA OAuth code for identity and mints a
- *                       Firebase custom token (no competition access yet).
- * grantCompetitionAccess: for the signed-in user, verifies a delegate/organizer/
- *                       staff role in the competition's WCIF and writes the
- *                       membership doc that Firestore rules gate on.
- *
- * The membership doc is written here with the Admin SDK (which bypasses
- * security rules), so clients can never grant themselves access.
+ * authWithWca: exchanges a WCA OAuth code for identity and mints a Firebase custom
+ * token (no competition access yet).
+ * grantCompetitionAccess: for the signed-in user, verifies a delegate/organizer/staff
+ * role in the competition's WCIF and writes the membership doc that Firestore rules
+ * gate on. It uses the Admin SDK (which bypasses security rules), so clients can never
+ * grant themselves access.
  */
 
 import { initializeApp } from "firebase-admin/app";
