@@ -1,6 +1,6 @@
 name: Deploy (prod)
 
-# pull request → test (no deploy); push to main → test → deploy hosting, rules and functions.
+# pull request → test (no deploy); push to main → test → deploy hosting, Firestore/Storage rules and functions.
 on:
   push:
     branches: [main]
@@ -90,8 +90,8 @@ jobs:
             exit $code
           fi
 
-      - name: Deploy Firestore rules
-        run: npx firebase-tools@15.22.3 deploy --only firestore:rules --project team-lead-tracker --non-interactive
+      - name: Deploy Firestore and Storage rules
+        run: npx firebase-tools@15.22.3 deploy --only firestore:rules,storage --project team-lead-tracker --non-interactive
 
       # Functions deploys cost Cloud Build + Artifact Registry; skip unless functions/
       # changed since the last successful deploy (compared to it, not the push's `before`,
