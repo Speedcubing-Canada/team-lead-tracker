@@ -33,7 +33,9 @@ describe("usePressReveal", () => {
     const btn = screen.getByRole("button");
 
     fireEvent.pointerDown(btn);
-    act(() => vi.advanceTimersByTime(500)); // hold fires
+    act(() => {
+      vi.advanceTimersByTime(500);
+    }); // hold fires
     expect(onReveal).toHaveBeenCalledTimes(1);
 
     fireEvent.click(btn); // synthetic click after release is suppressed
@@ -47,7 +49,9 @@ describe("usePressReveal", () => {
 
     fireEvent.pointerDown(btn);
     fireEvent.pointerCancel(btn);
-    act(() => vi.advanceTimersByTime(500));
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
 
     expect(onReveal).not.toHaveBeenCalled();
   });

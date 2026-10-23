@@ -1,0 +1,20 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "react", "oxc", "unicorn", "vitest"],
+  "categories": { "correctness": "error", "suspicious": "error" },
+  "rules": {
+    "react-hooks/rules-of-hooks": "error",
+    "react-hooks/exhaustive-deps": "error",
+    "react/react-in-jsx-scope": "off",
+    "react/set-state-in-effect": "off",
+    "react/purity": "off",
+    "typescript/no-unsafe-type-assertion": "off",
+    "typescript/consistent-return": "off",
+    "unicorn/no-array-sort": "off",
+    "unicorn/prefer-add-event-listener": "off",
+    "unicorn/consistent-function-scoping": "off",
+    "vitest/require-mock-type-parameters": "off",
+    "vitest/expect-expect": ["error", { "assertFunctionNames": ["expect", "assertSucceeds", "assertFails"] }]
+  },
+  "ignorePatterns": ["dist", "functions/lib", "graphify-out", "coverage"]
+}

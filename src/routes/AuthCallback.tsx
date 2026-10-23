@@ -40,7 +40,7 @@ export default function AuthCallback() {
         const { token, competitions } = await authWithWca(code, wcaRedirectUri());
         storeMyCompetitions(competitions);
         await signInWithCustomToken(auth(), token);
-        navigate("/", { replace: true });
+        void navigate("/", { replace: true });
       } catch (e) {
         const msg = e instanceof Error ? e.message : "";
         setError(msg && msg !== "internal" ? msg : "Login failed. Is the server reachable?");

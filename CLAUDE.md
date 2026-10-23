@@ -14,6 +14,7 @@ stage share the same live check-off state.
 
 - `npm run dev` — Vite dev server (http://localhost:5173).
 - `npm run build` — `tsc -b` (type-check) then `vite build`. Use this as the type-check gate.
+- `npm run lint`: oxlint with type-aware rules (tsgolint; typescript-eslint doesn't support TS 7).
 - `npm test` / `npm run test:watch` — Vitest. Run a single file: `npx vitest run src/lib/wcif.test.ts`.
   Filter by name: `npx vitest run -t "derives stage"`.
 - `npm run emulators` — Firebase emulator suite (Auth :9099, Functions :5001, Firestore :8080, UI).

@@ -110,8 +110,8 @@ export const grantCompetitionAccess = onCall(
     // force-refreshes its ID token after this call so the claims take effect.
     const auth = getAuth();
     const existing = (await auth.getUser(request.auth.uid)).customClaims ?? {};
-    const comps: Record<string, true> = { ...(existing["comps"] ?? {}), [competitionId]: true };
-    const privilegedComps: Record<string, true> = { ...(existing["privilegedComps"] ?? {}) };
+    const comps: Record<string, true> = { ...existing["comps"], [competitionId]: true };
+    const privilegedComps: Record<string, true> = { ...existing["privilegedComps"] };
     if (privileged) privilegedComps[competitionId] = true;
     else delete privilegedComps[competitionId];
     await auth.setCustomUserClaims(request.auth.uid, { ...existing, comps, privilegedComps });

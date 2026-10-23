@@ -55,12 +55,12 @@ function computeInitialSelection(
     stages.some((s) => s.id === stored.stageId);
 
   if (freshStored) {
-    const idx = groupsForStage(wcif, stored!.stageId).findIndex(
-      (g) => g.activity.id === stored!.groupActivityId,
+    const idx = groupsForStage(wcif, stored.stageId).findIndex(
+      (g) => g.activity.id === stored.groupActivityId,
     );
     return {
-      stageId: stored!.stageId,
-      groupIndex: idx >= 0 ? idx : defaultGroupIndex(wcif, stored!.stageId),
+      stageId: stored.stageId,
+      groupIndex: idx >= 0 ? idx : defaultGroupIndex(wcif, stored.stageId),
     };
   }
 
@@ -157,17 +157,18 @@ export function StageBoard({
 
   const index = Math.min(groupIndex, Math.max(groups.length - 1, 0));
   const current = groups[index];
+  const currentGroupId = current?.activity.id;
 
   // Persist the selection so it survives tab navigation and reloads. Also stamps
   // the auto-detected selection as "today's" on first mount, which is intended.
   useEffect(() => {
-    if (!competitionId || stageId == null || !current) return;
+    if (!competitionId || stageId == null || currentGroupId == null) return;
     saveSelection(competitionId, {
       stageId,
-      groupActivityId: current.activity.id,
+      groupActivityId: currentGroupId,
       savedDate: todayDate(),
     });
-  }, [competitionId, stageId, current?.activity.id]);
+  }, [competitionId, stageId, currentGroupId]);
 
   function changeStage(id: string) {
     setStageId(id);
