@@ -1,23 +1,20 @@
 /**
  * Cloud Functions for WCA-gated access.
  *
- * authWithWca         — exchanges a WCA OAuth code for identity and mints a
- *                       Firebase custom token (no competition access yet).
- * grantCompetitionAccess — for the signed-in user, verifies a delegate/organizer/
- *                       staff role in the competition's WCIF and writes the
- *                       membership doc that Firestore rules gate on.
- *
- * The membership doc is written here with the Admin SDK (which bypasses
- * security rules), so clients can never grant themselves access.
+ * authWithWca: exchanges a WCA OAuth code for identity and mints a Firebase custom
+ * token (no competition access yet).
+ * grantCompetitionAccess: for the signed-in user, verifies a delegate/organizer/staff
+ * role in the competition's WCIF and writes the membership doc that Firestore rules
+ * gate on. It uses the Admin SDK (which bypasses security rules), so clients can never
+ * grant themselves access.
  */
 
-import { gzipSync } from "node:zlib";
 import { initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { HttpsError, onCall, onRequest } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
-import { canAccessCompetition, isPrivileged } from "./access.js";
+import { canAccessCompetition, isPrivileged, mergeAccessClaims } from "./access.js";
 import type { MyCompetition } from "./competitions.js";
 import type { SlimWcif } from "./wcif.js";
 import {
@@ -26,6 +23,7 @@ import {
   fetchPublicWcif,
   fetchWcaIdentity,
 } from "./wca.js";
+import { wcifResponse } from "./wcifProxy.js";
 
 initializeApp();
 
@@ -88,8 +86,9 @@ export const grantCompetitionAccess = onCall(
     }
 
     const { competitionId } = (request.data ?? {}) as { competitionId?: string };
-    if (!competitionId) {
-      throw new HttpsError("invalid-argument", "competitionId is required");
+    // Used raw as a Firestore path segment and a claims key.
+    if (!competitionId || !/^[A-Za-z0-9]+$/.test(competitionId)) {
+      throw new HttpsError("invalid-argument", "A valid competitionId is required");
     }
 
     const wcif = await fetchPublicWcif(competitionId);
@@ -102,19 +101,14 @@ export const grantCompetitionAccess = onCall(
 
     const privileged = isPrivileged(wcif, wcaUserId);
 
-    // Accumulate per-competition access into the user's Auth custom claims so
-    // Storage rules can gate uploads on the token directly (cross-service
-    // firestore.get from Storage rules proved unreliable). `comps` = every
-    // competition the user is a member of (read access); `privilegedComps` =
-    // those where they're a delegate/organizer (write access). The client
-    // force-refreshes its ID token after this call so the claims take effect.
+    // Claims, not a cross-service firestore.get (unreliable from Storage rules), gate photos.
+    // The client force-refreshes its ID token after this call so they take effect.
     const auth = getAuth();
     const existing = (await auth.getUser(request.auth.uid)).customClaims ?? {};
-    const comps: Record<string, true> = { ...(existing["comps"] ?? {}), [competitionId]: true };
-    const privilegedComps: Record<string, true> = { ...(existing["privilegedComps"] ?? {}) };
-    if (privileged) privilegedComps[competitionId] = true;
-    else delete privilegedComps[competitionId];
-    await auth.setCustomUserClaims(request.auth.uid, { ...existing, comps, privilegedComps });
+    await auth.setCustomUserClaims(
+      request.auth.uid,
+      mergeAccessClaims(existing, competitionId, privileged),
+    );
 
     const db = getFirestore();
     const compRef = db.doc(`competitions/${competitionId}`);
@@ -135,37 +129,8 @@ export const grantCompetitionAccess = onCall(
   },
 );
 
-/**
- * Public WCIF proxy. Fetches the WCA WCIF, slims it to the fields the client
- * uses, gzips it, and returns it with a cache header so Firebase Hosting's CDN
- * edge-caches the (~45× smaller) response. We gzip here ourselves because
- * Hosting only auto-compresses static assets, not dynamic function responses.
- * Used for reloads and routes that don't go through the access-granting flow.
- * Reached via the /api/wcif/** Hosting rewrite, so it's same-origin (no CORS).
- */
+/** WCIF proxy, reached same-origin via the /api/wcif/** Hosting rewrite. */
 export const wcif = onRequest(async (req, res) => {
-  const competitionId = req.path.split("/").filter(Boolean).pop();
-  if (!competitionId) {
-    res.status(400).json({ error: "Missing competition id" });
-    return;
-  }
-  try {
-    const slim = await fetchPublicWcif(decodeURIComponent(competitionId));
-    const body = JSON.stringify(slim);
-    res.set("Cache-Control", "public, max-age=300, s-maxage=300");
-    res.set("Content-Type", "application/json; charset=utf-8");
-    res.set("Vary", "Accept-Encoding");
-    if ((req.headers["accept-encoding"] ?? "").includes("gzip")) {
-      res.set("Content-Encoding", "gzip");
-      res.end(gzipSync(body));
-    } else {
-      res.end(body);
-    }
-  } catch (err) {
-    if (err instanceof HttpsError && err.code === "not-found") {
-      res.status(404).json({ error: err.message });
-      return;
-    }
-    res.status(502).json({ error: `Failed to load competition "${competitionId}"` });
-  }
+  const { status, headers, body } = await wcifResponse(req.path, req.headers["accept-encoding"] ?? "");
+  res.status(status).set(headers).end(body);
 });

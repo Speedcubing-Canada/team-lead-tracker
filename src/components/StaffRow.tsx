@@ -63,15 +63,15 @@ export function StaffRow({ person, station, check, onStatus, onNote }: StaffRowP
   }
 
   // Tapping present/absent: if the lead was editing a note, fold it into the same write so a
-  // newly created doc carries both status and note. Clearing a status (toggle to
-  // null) deletes the doc, so no note rides along.
+  // newly created doc carries both status and note. Clearing a status passes the note
+  // along so it survives as a note-only check.
   function pressStatus(next: CheckStatus | null) {
-    const fold = statusPress.current && next !== null;
+    const fold = statusPress.current;
     statusPress.current = false;
     editing.current = false;
     const value = pendingNote();
-    const changedNote = fold && value !== (check?.note ?? "");
-    onStatus(next, changedNote ? value : undefined);
+    if (next === null) onStatus(null, value || undefined);
+    else onStatus(next, fold && value !== (check?.note ?? "") ? value : undefined);
   }
 
   return (
@@ -125,6 +125,7 @@ export function StaffRow({ person, station, check, onStatus, onNote }: StaffRowP
         <input
           ref={inputRef}
           value={note}
+          maxLength={500}
           onChange={(e) => setNote(e.target.value)}
           onFocus={() => (editing.current = true)}
           onBlur={commitNote}

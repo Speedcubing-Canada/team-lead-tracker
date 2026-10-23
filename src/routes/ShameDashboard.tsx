@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import { useAuth } from "../auth/AuthContext";
-import { useChecks } from "../lib/useChecks";
 import {
   absencesByGroup,
   absencesByPerson,
@@ -15,6 +14,7 @@ import { AbsenteeBoard } from "../components/AbsenteeBoard";
 import { DashboardSkeleton } from "../components/Skeleton";
 import { WcifGate } from "../components/WcifGate";
 import type { Wcif } from "../lib/wca";
+import type { CheckRecord } from "../lib/checks";
 
 type Scope = "team" | "global";
 
@@ -37,14 +37,23 @@ function dayLabel(date: string): string {
 export default function ShameDashboard() {
   return (
     <WcifGate skeleton={<DashboardSkeleton />}>
-      {(wcif, competitionId) => <Dashboard wcif={wcif} competitionId={competitionId} />}
+      {(wcif, competitionId, checks) => (
+        <Dashboard wcif={wcif} competitionId={competitionId} checks={checks} />
+      )}
     </WcifGate>
   );
 }
 
-function Dashboard({ wcif, competitionId }: { wcif: Wcif; competitionId: string }) {
+function Dashboard({
+  wcif,
+  competitionId,
+  checks,
+}: {
+  wcif: Wcif;
+  competitionId: string;
+  checks: Map<string, CheckRecord>;
+}) {
   const { user } = useAuth();
-  const checks = useChecks(competitionId);
 
   const [scope, setScope] = useState<Scope>("team");
   const [day, setDay] = useState<string | null>(null);

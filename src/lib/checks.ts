@@ -1,6 +1,7 @@
 import {
   collection,
   deleteDoc,
+  deleteField,
   doc,
   onSnapshot,
   serverTimestamp,
@@ -50,21 +51,34 @@ function checkRef(competitionId: string, activityId: number, registrantId: numbe
 export function subscribeToChecks(
   competitionId: string,
   onChange: (checks: Map<string, CheckRecord>) => void,
+  onError?: (err: Error) => void,
 ): () => void {
   const ref = collection(db(), `competitions/${competitionId}/checks`);
-  return onSnapshot(ref, (snap) => {
-    const map = new Map<string, CheckRecord>();
-    snap.forEach((d) => map.set(d.id, d.data() as CheckRecord));
-    onChange(map);
-  });
+  return onSnapshot(
+    ref,
+    (snap) => {
+      const map = new Map<string, CheckRecord>();
+      snap.forEach((d) => map.set(d.id, d.data() as CheckRecord));
+      onChange(map);
+    },
+    onError,
+  );
 }
 
 /**
- * Set (or clear) a staffer's present/absent status for a group. An optional note
- * is written in the same operation so a freshly created doc carries both — a
- * status-less check would be rejected by the security rules. Omit `note` to leave
- * any existing note untouched.
+ * What a status tap writes. A non-empty note rides along so a fresh doc carries it
+ * (a status-less check needs a note to pass the rules); clearing the status keeps it
+ * as a note-only check, or deletes the check (null) when there's no note.
  */
+export function checkWrite(
+  status: CheckStatus | null,
+  note?: string,
+): { status: CheckStatus | null; note?: string } | null {
+  if (status === null && !note) return null;
+  return { status, ...(note !== undefined ? { note } : {}) };
+}
+
+/** Set (or clear) a staffer's status for a group; omit `note` to leave any note untouched. */
 export async function writeStatus(
   competitionId: string,
   activityId: number,
@@ -74,15 +88,16 @@ export async function writeStatus(
   note?: string,
 ): Promise<void> {
   const ref = checkRef(competitionId, activityId, registrantId);
-  if (status === null) {
+  const write = checkWrite(status, note);
+  if (!write) {
     await deleteDoc(ref);
     return;
   }
   await setDoc(
     ref,
     {
-      status,
-      ...(note !== undefined ? { note } : {}),
+      ...write,
+      status: write.status ?? deleteField(),
       updatedByName: user.name,
       updatedByWcaId: user.wcaUserId,
       updatedAt: serverTimestamp(),

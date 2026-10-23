@@ -66,7 +66,9 @@ function compListeners(competitionId: string): Set<() => void> {
   return set;
 }
 
-type CheckPatch = Pick<CheckRecord, "updatedByName" | "updatedByWcaId"> & Partial<CheckRecord>;
+/** `status: null` removes the field, like `deleteField()`. */
+type CheckPatch = Pick<CheckRecord, "updatedByName" | "updatedByWcaId"> &
+  Partial<Omit<CheckRecord, "status">> & { status?: CheckStatus | null };
 
 /** Merge-write like `setDoc(..., { merge: true })`; a null patch deletes. */
 function upsert(
@@ -77,18 +79,26 @@ function upsert(
 ): void {
   const map = compChecks(competitionId);
   const id = `${activityId}_${registrantId}`; // checkDocId
-  if (patch) map.set(id, { ...map.get(id), ...patch });
-  else map.delete(id);
+  if (patch) {
+    const { status, ...rest } = { ...map.get(id), ...patch };
+    map.set(id, status ? { status, ...rest } : rest);
+  } else map.delete(id);
   compListeners(competitionId).forEach((l) => l());
 }
 
+const author = (user: AuthUser) => ({ updatedByName: user.name, updatedByWcaId: user.wcaUserId });
+
 export const checksApi = {
-  subscribeToChecks: vi.fn((competitionId: string, onChange: Listener<Map<string, CheckRecord>>) => {
-    const notify = () => onChange(new Map(compChecks(competitionId)));
-    compListeners(competitionId).add(notify);
-    notify();
-    return () => compListeners(competitionId).delete(notify);
-  }),
+  subscribeToChecks: vi.fn(
+    (competitionId: string, onChange: Listener<Map<string, CheckRecord>>, _onError?: Listener<Error>) => {
+      const notify = () => onChange(new Map(compChecks(competitionId)));
+      compListeners(competitionId).add(notify);
+      notify();
+      return () => {
+        compListeners(competitionId).delete(notify);
+      };
+    },
+  ),
   writeStatus: vi.fn(
     async (
       competitionId: string,
@@ -97,26 +107,16 @@ export const checksApi = {
       status: CheckStatus | null,
       user: AuthUser,
       note?: string,
-    ) =>
-      upsert(
-        competitionId,
-        activityId,
-        registrantId,
-        status && {
-          status,
-          ...(note !== undefined ? { note } : {}),
-          updatedByName: user.name,
-          updatedByWcaId: user.wcaUserId,
-        },
-      ),
+    ) => {
+      // Loaded per call: a top-level import would deadlock (see above).
+      const { checkWrite } = await vi.importActual<typeof import("../lib/checks")>("../lib/checks");
+      const write = checkWrite(status, note);
+      upsert(competitionId, activityId, registrantId, write && { ...write, ...author(user) });
+    },
   ),
   writeNote: vi.fn(
     async (competitionId: string, activityId: number, registrantId: number, note: string, user: AuthUser) =>
-      upsert(competitionId, activityId, registrantId, {
-        note,
-        updatedByName: user.name,
-        updatedByWcaId: user.wcaUserId,
-      }),
+      upsert(competitionId, activityId, registrantId, { note, ...author(user) }),
   ),
 };
 

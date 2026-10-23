@@ -1,49 +1,22 @@
-import { readFileSync } from "node:fs";
-import { afterAll, beforeAll, beforeEach, describe, it } from "vitest";
-import {
-  assertFails,
-  assertSucceeds,
-  initializeTestEnvironment,
-  type RulesTestEnvironment,
-} from "@firebase/rules-unit-testing";
-import { deleteDoc, doc, getDoc, setDoc, setLogLevel } from "firebase/firestore";
+import { describe, it } from "vitest";
+import { assertFails, assertSucceeds } from "@firebase/rules-unit-testing";
+import { deleteDoc, doc, getDoc, setDoc } from "firebase/firestore";
+import { DELEGATE, LEAD, useEmulator } from "../emulator";
 
 const COMP = "TestComp2026";
 const CHECK = `competitions/${COMP}/checks/101_5`;
 const PERSON = `competitions/${COMP}/people/42`;
 
-let env: RulesTestEnvironment;
+const { seed, contextFor } = useEmulator(COMP);
 
-beforeAll(async () => {
-  setLogLevel("error");
-  env = await initializeTestEnvironment({
-    projectId: "demo-test",
-    firestore: { rules: readFileSync("firestore.rules", "utf8") },
-  });
-});
-
-afterAll(() => env.cleanup());
-
-beforeEach(async () => {
-  await env.clearFirestore();
-  await env.withSecurityRulesDisabled(async (ctx) => {
-    const db = ctx.firestore();
-    await setDoc(doc(db, `competitions/${COMP}`), { name: "Test Comp" });
-    await setDoc(doc(db, `competitions/${COMP}/members/lead`), { wcaUserId: 1, privileged: false });
-    await setDoc(doc(db, `competitions/${COMP}/members/delegate`), { wcaUserId: 2, privileged: true });
-  });
-});
-
-const lead = () => env.authenticatedContext("lead").firestore();
-const delegate = () => env.authenticatedContext("delegate").firestore();
-const outsider = () => env.authenticatedContext("outsider").firestore();
-const anon = () => env.unauthenticatedContext().firestore();
+const lead = () => contextFor(LEAD.uid).firestore();
+const delegate = () => contextFor(DELEGATE.uid).firestore();
+const outsider = () => contextFor("outsider").firestore();
+const anon = () => contextFor(null).firestore();
 
 const mark = (status: string) => ({ status, updatedByWcaId: 1, updatedByName: "Lead" });
 
-async function seedCheck(data: Record<string, unknown>) {
-  await env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), CHECK), data));
-}
+const seedCheck = (data: Record<string, unknown>) => seed(CHECK, data);
 
 describe("checks", () => {
   it("lets a member mark present or absent", async () => {
@@ -77,14 +50,25 @@ describe("checks", () => {
     await assertSucceeds(deleteDoc(doc(lead(), CHECK)));
   });
 
-  it("rejects a status outside present/absent", async () => {
+  it("rejects a status outside present/absent, even with a note", async () => {
     await assertFails(setDoc(doc(lead(), CHECK), mark("late")));
+    await assertFails(setDoc(doc(lead(), CHECK), { ...mark("late"), note: "x" }));
   });
 
-  it("rejects a write without an int updatedByWcaId", async () => {
+  it("rejects a note that isn't a string alongside a mark", async () => {
+    await assertFails(setDoc(doc(lead(), CHECK), { ...mark("present"), note: 5 }));
+  });
+
+  it("caps notes at 500 characters", async () => {
+    await assertSucceeds(setDoc(doc(lead(), CHECK), { ...mark("present"), note: "x".repeat(500) }));
+    await assertFails(setDoc(doc(lead(), CHECK), { ...mark("present"), note: "x".repeat(501) }));
+  });
+
+  it("rejects a check not attributed to the caller's WCA id", async () => {
     await assertFails(setDoc(doc(lead(), CHECK), { status: "present" }));
-    await assertFails(setDoc(doc(lead(), CHECK), { status: "present", updatedByWcaId: "1" }));
-    await assertFails(setDoc(doc(lead(), CHECK), { note: "x", updatedByWcaId: 1.5 }));
+    await assertFails(setDoc(doc(lead(), CHECK), { ...mark("present"), updatedByWcaId: 2 }));
+    await assertFails(setDoc(doc(lead(), CHECK), { ...mark("present"), updatedByWcaId: "1" }));
+    await assertFails(setDoc(doc(lead(), CHECK), { note: "x", updatedByWcaId: 2 }));
   });
 
   it("rejects a write with neither a status nor a string note", async () => {
@@ -139,13 +123,17 @@ describe("people photos", () => {
     await assertSucceeds(deleteDoc(doc(delegate(), PERSON)));
   });
 
-  it("rejects malformed photo metadata", async () => {
-    await assertFails(setDoc(doc(delegate(), PERSON), { photoPath: 1, uploadedByWcaId: 2 }));
-    await assertFails(setDoc(doc(delegate(), PERSON), { photoPath: "p", uploadedByWcaId: "2" }));
+  it("rejects a photo path that isn't a string", async () => {
+    await assertFails(setDoc(doc(delegate(), PERSON), { ...photo, photoPath: 1 }));
+  });
+
+  it("rejects photo metadata not attributed to the caller's WCA id", async () => {
+    await assertFails(setDoc(doc(delegate(), PERSON), { ...photo, uploadedByWcaId: 1 }));
+    await assertFails(setDoc(doc(delegate(), PERSON), { ...photo, uploadedByWcaId: "2" }));
   });
 
   it("lets any member read, but only privileged members write", async () => {
-    await env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), PERSON), photo));
+    await seed(PERSON, photo);
     await assertSucceeds(getDoc(doc(lead(), PERSON)));
     await assertFails(setDoc(doc(lead(), PERSON), photo));
     await assertFails(deleteDoc(doc(lead(), PERSON)));

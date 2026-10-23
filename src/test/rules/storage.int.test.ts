@@ -1,40 +1,18 @@
-import { readFileSync } from "node:fs";
-import { afterAll, beforeAll, beforeEach, describe, it } from "vitest";
-import {
-  assertFails,
-  assertSucceeds,
-  initializeTestEnvironment,
-  type RulesTestEnvironment,
-} from "@firebase/rules-unit-testing";
+import { beforeEach, describe, it } from "vitest";
+import { assertFails, assertSucceeds } from "@firebase/rules-unit-testing";
 import { deleteObject, getBytes, ref, uploadBytes } from "firebase/storage";
+import { DELEGATE, LEAD, useEmulator } from "../emulator";
 
 const COMP = "TestComp2026";
 const PATH = `competitions/${COMP}/people/42.jpg`;
 const JPEG = { contentType: "image/jpeg" };
 
-let env: RulesTestEnvironment;
+const { seedObject, contextFor } = useEmulator(COMP);
 
-beforeAll(async () => {
-  env = await initializeTestEnvironment({
-    projectId: "demo-test",
-    storage: { rules: readFileSync("storage.rules", "utf8") },
-  });
-});
+beforeEach(() => seedObject(PATH, new Uint8Array([1, 2, 3])));
 
-afterAll(() => env.cleanup());
-
-beforeEach(async () => {
-  await env.clearStorage();
-  await env.withSecurityRulesDisabled(async (ctx) => {
-    await uploadBytes(ref(ctx.storage(), PATH), new Uint8Array([1, 2, 3]), JPEG);
-  });
-});
-
-const as = (claims?: Record<string, unknown>) =>
-  claims ? env.authenticatedContext("u", claims).storage() : env.unauthenticatedContext().storage();
-
-const member = () => as({ comps: { [COMP]: true } });
-const privileged = () => as({ comps: { [COMP]: true }, privilegedComps: { [COMP]: true } });
+const member = () => contextFor(LEAD.uid).storage();
+const privileged = () => contextFor(DELEGATE.uid).storage();
 
 describe("person photos", () => {
   it("lets a member read", async () => {
@@ -60,9 +38,9 @@ describe("person photos", () => {
 
   it("denies tokens without claims, other comps' claims, and signed-out users", async () => {
     for (const storage of [
-      as({}),
-      as({ comps: { OtherComp: true }, privilegedComps: { OtherComp: true } }),
-      as(),
+      contextFor("outsider").storage(),
+      contextFor("u", { comps: { OtherComp: true }, privilegedComps: { OtherComp: true } }).storage(),
+      contextFor(null).storage(),
     ]) {
       await assertFails(getBytes(ref(storage, PATH)));
       await assertFails(uploadBytes(ref(storage, PATH), new Uint8Array(8), JPEG));

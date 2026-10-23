@@ -27,9 +27,9 @@ export default defineConfig({
     globals: true,
     coverage: {
       include: ["src/**", "functions/src/**"],
-      exclude: ["**/*.test.*", "src/test/**", "src/main.tsx"],
-      // Ratchet: raise as coverage grows, never lower.
-      thresholds: { statements: 83, branches: 77, functions: 85, lines: 84 },
+      exclude: ["**/*.test.*", "src/test/**", "functions/src/test/**", "src/main.tsx"],
+      // Ratchet, about a point under measured: raise as coverage grows, never lower.
+      thresholds: { statements: 88, branches: 82, functions: 86, lines: 90 },
     },
     projects: [
       {
@@ -67,8 +67,8 @@ export default defineConfig({
         test: {
           name: "integration",
           environment: "node",
+          setupFiles: ["./src/test/emulatorGuard.ts"],
           include: ["**/*.int.test.ts"],
-          exclude: ["**/node_modules/**"],
           fileParallelism: false,
         },
       },

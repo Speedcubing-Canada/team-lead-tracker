@@ -23,7 +23,7 @@ type OpenError = { title: string; body: string; source: "manual" | "list" };
 
 function describeOpenError(err: unknown): Omit<OpenError, "source"> {
   const code = (err as { code?: string } | null)?.code;
-  if (code === "functions/not-found") {
+  if (code === "functions/not-found" || code === "functions/invalid-argument") {
     return {
       title: "Competition not found",
       body: "Check the ID matches the one in the competition's WCA URL, e.g. WC2025.",

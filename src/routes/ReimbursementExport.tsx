@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import { useChecks } from "../lib/useChecks";
 import { listDays } from "../lib/wcif";
 import {
   DEFAULT_TIERS,
@@ -13,6 +12,7 @@ import { toCsv, toHtml, toMarkdown, triggerDownload, type ReportMeta } from "../
 import { ReimbursementSkeleton } from "../components/Skeleton";
 import { WcifGate } from "../components/WcifGate";
 import type { Wcif } from "../lib/wca";
+import type { CheckRecord } from "../lib/checks";
 
 type Tone = "good" | "warn" | "bad";
 
@@ -52,13 +52,22 @@ const tierCap = (t: Tier): string => (Number.isFinite(t.maxAbsentPct) ? `≤${t.
 export default function ReimbursementExport() {
   return (
     <WcifGate skeleton={<ReimbursementSkeleton />}>
-      {(wcif, competitionId) => <Export wcif={wcif} competitionId={competitionId} />}
+      {(wcif, competitionId, checks) => (
+        <Export wcif={wcif} competitionId={competitionId} checks={checks} />
+      )}
     </WcifGate>
   );
 }
 
-function Export({ wcif, competitionId }: { wcif: Wcif; competitionId: string }) {
-  const checks = useChecks(competitionId);
+function Export({
+  wcif,
+  competitionId,
+  checks,
+}: {
+  wcif: Wcif;
+  competitionId: string;
+  checks: Map<string, CheckRecord>;
+}) {
   const [tiers, setTiers] = useState<Tier[]>(DEFAULT_TIERS);
   const [editingTiers, setEditingTiers] = useState(false);
 

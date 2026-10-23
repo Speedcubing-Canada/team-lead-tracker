@@ -25,12 +25,14 @@ describe("fetchPublicWcif in production", () => {
     expect(fetch.mock.calls[0]![0]).toBe("/api/wcif/Comp2026");
   });
 
-  it("falls back to WCA when the proxy fails or is unreachable", async () => {
-    let fetch = stubFetch(() => new Response("", { status: 502 }), () => Response.json(wcif));
+  it("falls back to WCA when the proxy fails", async () => {
+    const fetch = stubFetch(() => new Response("", { status: 502 }), () => Response.json(wcif));
     await expect(fetchPublicWcif("Comp2026")).resolves.toEqual(wcif);
     expect(fetch.mock.calls[1]![0]).toMatch(wcaUrl);
+  });
 
-    fetch = stubFetch(() => Promise.reject(new TypeError("network")), () => Response.json(wcif));
+  it("falls back to WCA when the proxy is unreachable", async () => {
+    const fetch = stubFetch(() => Promise.reject(new TypeError("network")), () => Response.json(wcif));
     await expect(fetchPublicWcif("Comp2026")).resolves.toEqual(wcif);
     expect(fetch.mock.calls[1]![0]).toMatch(wcaUrl);
   });
@@ -47,6 +49,8 @@ describe("fetchPublicWcif in production", () => {
 });
 
 describe("fetchPublicWcif in dev", () => {
+  beforeEach(() => vi.stubEnv("DEV", true));
+
   it("goes straight to WCA and reports the status on failure", async () => {
     const fetch = stubFetch(() => new Response("", { status: 404 }));
     await expect(fetchPublicWcif("Comp2026")).rejects.toThrow('Failed to load competition "Comp2026" (404)');

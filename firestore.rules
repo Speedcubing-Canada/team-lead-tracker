@@ -2,8 +2,8 @@ rules_version = '2';
 
 // Access model: a user may read/write a competition's data only if a membership
 // doc exists for them under that competition. Membership docs are written
-// exclusively by the authWithWca Cloud Function (Admin SDK, which bypasses these
-// rules) after verifying the user holds a delegate/organizer/staff role in the
+// exclusively by the grantCompetitionAccess Cloud Function (Admin SDK, which
+// bypasses these rules) after verifying the user holds a delegate/organizer/staff role in the
 // competition's WCIF. Clients can never grant themselves access.
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -12,11 +12,14 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/competitions/$(compId)/members/$(request.auth.uid));
     }
 
+    function member(compId) {
+      return get(/databases/$(database)/documents/competitions/$(compId)/members/$(request.auth.uid)).data;
+    }
+
     // Privileged = delegate/organizer. The flag is written on the membership doc
     // by grantCompetitionAccess (Admin SDK), since rules can't read WCIF roles.
     function isPrivileged(compId) {
-      return request.auth != null
-        && get(/databases/$(database)/documents/competitions/$(compId)/members/$(request.auth.uid)).data.privileged == true;
+      return request.auth != null && member(compId).privileged == true;
     }
 
     match /competitions/{compId} {
@@ -30,18 +33,15 @@ service cloud.firestore {
 
       match /checks/{checkId} {
         allow read: if isMember(compId);
-        // A check carries either a present/absent mark, or is note-only (a lead
-        // jotted a note without marking attendance yet). A merge-update onto a
-        // doc that already has a status keeps that status in request.resource.data,
-        // so it still satisfies the first branch.
+        // A check is a present/absent mark or note-only. A merge-update keeps the
+        // stored status in request.resource.data, so a note added later still passes.
         allow create, update: if isMember(compId)
-          && request.resource.data.updatedByWcaId is int
-          && (
-               (('status' in request.resource.data)
-                 && request.resource.data.status in ['present', 'absent'])
-               || (!('status' in request.resource.data)
-                 && request.resource.data.note is string)
-             );
+          && request.resource.data.updatedByWcaId == member(compId).wcaUserId
+          && (!('note' in request.resource.data)
+                || (request.resource.data.note is string && request.resource.data.note.size() <= 500))
+          && (('status' in request.resource.data)
+                ? request.resource.data.status in ['present', 'absent']
+                : 'note' in request.resource.data);
         allow delete: if isMember(compId);
       }
 
@@ -50,7 +50,7 @@ service cloud.firestore {
       match /people/{wcaUserId} {
         allow read: if isMember(compId);
         allow create, update: if isPrivileged(compId)
-          && request.resource.data.uploadedByWcaId is int
+          && request.resource.data.uploadedByWcaId == member(compId).wcaUserId
           && request.resource.data.photoPath is string;
         allow delete: if isPrivileged(compId);
       }

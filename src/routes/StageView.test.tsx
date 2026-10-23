@@ -1,4 +1,4 @@
-import { currentPath, pinClock, renderApp } from "../test/renderApp";
+import { alice, currentPath, pinClock, renderApp } from "../test/renderApp";
 import { describe, expect, it } from "vitest";
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { backend, checksApi } from "../test/fakeBackend";
@@ -57,6 +57,21 @@ describe("stage view", () => {
     );
   });
 
+  it("keeps the note when a mark is tapped off", async () => {
+    await checksApi.writeStatus(COMP, 101, 2, "absent", alice, "sick");
+    renderApp(`/c/${COMP}`, { wcifs: [sampleWcif] });
+    await heading();
+    await within(row("Bob Brown")).findByDisplayValue("sick");
+
+    fireEvent.click(within(row("Bob Brown")).getByLabelText("Absent"));
+
+    await waitFor(() =>
+      expect(within(row("Bob Brown")).getByLabelText("Absent")).toHaveAttribute("aria-pressed", "false"),
+    );
+    expect(within(row("Bob Brown")).getByDisplayValue("sick")).toBeInTheDocument();
+    expect(backend.checks.get(COMP)?.get("101_2")).not.toHaveProperty("status");
+  });
+
   it("keeps the selected group across a trip to the dashboard", async () => {
     renderApp(`/c/${COMP}`, { wcifs: [sampleWcif] });
     await heading();
@@ -78,6 +93,16 @@ describe("stage view", () => {
     await waitFor(() => expect(queryClient.getQueryState(["wcif", COMP])?.status).toBe("error"));
 
     expect(await heading()).toHaveTextContent("3x3x3 Cube, Round 1 · Group 1");
+  });
+
+  it("tells the lead when live marks stop syncing", async () => {
+    checksApi.subscribeToChecks.mockImplementationOnce((_comp, _onChange, onError) => {
+      onError?.(Object.assign(new Error("Missing or insufficient permissions."), { code: "permission-denied" }));
+      return () => {};
+    });
+    renderApp(`/c/${COMP}`, { wcifs: [sampleWcif] });
+    await heading();
+    expect(await screen.findByRole("alert")).toHaveTextContent("Live marks stopped");
   });
 
   it("tells the lead when a mark fails to save", async () => {

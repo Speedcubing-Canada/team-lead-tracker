@@ -1,7 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import { useAuth } from "../auth/AuthContext";
-import { useChecks } from "../lib/useChecks";
-import { writeNote, writeStatus } from "../lib/checks";
+import { writeNote, writeStatus, type CheckRecord } from "../lib/checks";
 import { StageBoard, type StageBoardHandlers } from "../components/StageBoard";
 import { StageBoardSkeleton } from "../components/Skeleton";
 import { ErrorNotice } from "../components/ErrorNotice";
@@ -15,14 +14,23 @@ import type { Wcif } from "../lib/wca";
 export default function StageView() {
   return (
     <WcifGate skeleton={<StageBoardSkeleton />}>
-      {(wcif, competitionId) => <StageViewBody wcif={wcif} competitionId={competitionId} />}
+      {(wcif, competitionId, checks) => (
+        <StageViewBody wcif={wcif} competitionId={competitionId} checks={checks} />
+      )}
     </WcifGate>
   );
 }
 
-function StageViewBody({ wcif, competitionId }: { wcif: Wcif; competitionId: string }) {
+function StageViewBody({
+  wcif,
+  competitionId,
+  checks,
+}: {
+  wcif: Wcif;
+  competitionId: string;
+  checks: Map<string, CheckRecord>;
+}) {
   const { user } = useAuth();
-  const checks = useChecks(competitionId);
   const [saveFailed, setSaveFailed] = useState(false);
   const writeSeq = useRef(0);
   const lastFailedSeq = useRef(0);

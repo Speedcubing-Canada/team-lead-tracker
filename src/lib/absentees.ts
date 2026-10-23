@@ -67,7 +67,7 @@ function* markedChecks(
 ): Iterable<{ activityId: number; registrantId: number; record: CheckRecord }> {
   for (const [id, record] of checks) {
     const parsed = parseCheckDocId(id);
-    if (!parsed || !started.has(parsed.activityId)) continue;
+    if (!record.status || !parsed || !started.has(parsed.activityId)) continue;
     if (!wcif.persons.some((p) => p.registrantId === parsed.registrantId)) continue;
     yield { activityId: parsed.activityId, registrantId: parsed.registrantId, record };
   }

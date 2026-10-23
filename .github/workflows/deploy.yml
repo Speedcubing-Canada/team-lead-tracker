@@ -1,6 +1,6 @@
 name: Deploy (prod)
 
-# pull request → test (no deploy); push to main → test → deploy hosting, rules and functions.
+# pull request → test (no deploy); push to main → test → deploy hosting, Firestore/Storage rules and functions.
 on:
   push:
     branches: [main]
@@ -26,21 +26,6 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
-      - run: npm ci --prefix functions   # root vitest also runs functions/ tests
-      - run: npm run coverage
-      - run: npm run build
-      - run: npm --prefix functions run build
-
-  integration:
-    name: Integration (emulators)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 22
-          cache: npm
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
@@ -50,12 +35,14 @@ jobs:
           path: ~/.cache/firebase/emulators
           key: firebase-emulators-${{ hashFiles('package-lock.json') }}
       - run: npm ci
-      - run: npm ci --prefix functions
-      - run: npm run test:int
+      - run: npm ci --prefix functions   # root vitest also runs functions/ tests
+      - run: npm run coverage            # every test project, inside the emulators
+      - run: npm run build
+      - run: npm --prefix functions run build
 
   deploy:
     name: Deploy → Production
-    needs: [test, integration]
+    needs: test
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
@@ -92,6 +79,10 @@ jobs:
 
       - name: Deploy Firestore rules
         run: npx firebase-tools@15.22.3 deploy --only firestore:rules --project team-lead-tracker --non-interactive
+
+      # Its own step, so a Storage permission gap can't hold back the Firestore rules.
+      - name: Deploy Storage rules
+        run: npx firebase-tools@15.22.3 deploy --only storage --project team-lead-tracker --non-interactive
 
       # Functions deploys cost Cloud Build + Artifact Registry; skip unless functions/
       # changed since the last successful deploy (compared to it, not the push's `before`,

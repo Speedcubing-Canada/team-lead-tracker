@@ -120,6 +120,23 @@ describe("StaffRow notes", () => {
     expect(onStatus).toHaveBeenCalledWith("present", undefined);
   });
 
+  it("keeps the note when the active status is tapped off", () => {
+    const onStatus = vi.fn();
+    render(
+      <StaffRow
+        person={person}
+        station={null}
+        check={{ status: "absent", note: "sick", updatedByName: "L", updatedByWcaId: 9 }}
+        onStatus={onStatus}
+        onNote={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByLabelText("Absent"));
+
+    expect(onStatus).toHaveBeenCalledWith(null, "sick");
+  });
+
   it("does not write when the note is unchanged", () => {
     const onNote = vi.fn();
     render(
