@@ -3,6 +3,8 @@ import type { Wcif } from "./wca";
 import { multiStageWcif, sampleWcif } from "../test/fixtures/wcif";
 import {
   activityById,
+  compDate,
+  compTimeZone,
   canAccessCompetition,
   defaultGroupIndex,
   defaultStageId,
@@ -84,6 +86,16 @@ describe("venue-local dates", () => {
 
   it("dates an evening group on the venue's calendar day", () => {
     expect(groupsForStage(evening, "1").find((g) => g.activity.id === 102)?.date).toBe("2026-07-01");
+  });
+
+  it("falls back to UTC for a missing or unknown zone, and never throws on a bad time", () => {
+    for (const timezone of ["", "Mars/Olympus_Mons"]) {
+      const odd: Wcif = structuredClone(evening);
+      odd.schedule.venues[0]!.timezone = timezone;
+      expect(compTimeZone(odd)).toBe("UTC");
+      expect(compDate(odd, "2026-07-02T00:30:00Z")).toBe("2026-07-02");
+    }
+    expect(() => compDate(evening, "not a time")).not.toThrow();
   });
 
   it("lands on tonight's group once the afternoon group has ended", () => {

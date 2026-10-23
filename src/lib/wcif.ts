@@ -37,16 +37,39 @@ export function isStaffCode(code: string): boolean {
 
 const dateFormats = new Map<string, Intl.DateTimeFormat>();
 
+function dateFormat(timeZone: string | undefined): Intl.DateTimeFormat {
+  const key = timeZone || "UTC";
+  let format = dateFormats.get(key);
+  if (!format) {
+    try {
+      format = new Intl.DateTimeFormat("en-US", { timeZone: key, year: "numeric", month: "2-digit", day: "2-digit" });
+    } catch {
+      // A zone newer than this browser's tz data.
+      format = dateFormat("UTC");
+    }
+    dateFormats.set(key, format);
+  }
+  return format;
+}
+
 /**
- * Calendar date (YYYY-MM-DD) of an instant at the venue, so an evening group
- * isn't filed under the next UTC day.
+ * The venue's IANA timezone, or UTC when WCA's value is missing or unknown here.
  * ponytail: first venue's timezone; go per-venue if a comp ever spans zones.
  */
+export function compTimeZone(wcif: Wcif): string {
+  return dateFormat(wcif.schedule.venues[0]?.timezone).resolvedOptions().timeZone;
+}
+
+/** Calendar date (YYYY-MM-DD) of an instant at the venue, so an evening group isn't filed under the next UTC day. */
 export function compDate(wcif: Wcif, instant: string | Date = new Date()): string {
-  const timeZone = wcif.schedule.venues[0]?.timezone ?? "UTC";
-  let format = dateFormats.get(timeZone);
-  if (!format) dateFormats.set(timeZone, (format = new Intl.DateTimeFormat("en-CA", { timeZone })));
-  return format.format(new Date(instant));
+  const date = new Date(instant);
+  if (Number.isNaN(date.getTime())) return String(instant).slice(0, 10);
+  const parts = Object.fromEntries(
+    dateFormat(wcif.schedule.venues[0]?.timezone)
+      .formatToParts(date)
+      .map((p) => [p.type, p.value]),
+  );
+  return `${parts["year"]}-${parts["month"]}-${parts["day"]}`;
 }
 
 function eachRoom(wcif: Wcif): WcifRoom[] {
