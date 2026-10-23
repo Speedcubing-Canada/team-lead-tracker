@@ -37,7 +37,7 @@ function dayLabel(date: string): string {
 export default function ShameDashboard() {
   const { competitionId } = useParams();
   const { user } = useAuth();
-  const { data: wcif, isLoading } = useWcif(competitionId);
+  const { data: wcif, isLoading, error } = useWcif(competitionId);
   const checks = useChecks(competitionId);
 
   const [scope, setScope] = useState<Scope>("team");
@@ -81,6 +81,13 @@ export default function ShameDashboard() {
 
   if (isLoading) {
     return <DashboardSkeleton />;
+  }
+  if (!wcif) {
+    return (
+      <p className="p-6 text-center text-sm text-red-600 dark:text-red-400">
+        {error instanceof Error ? error.message : "Could not load this competition."}
+      </p>
+    );
   }
 
   const tab = (value: Scope, label: string) => (
