@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { FileDown, Loader2, LogIn, LogOut } from "lucide-react";
+import { CircleAlert, FileDown, Loader2, LogIn, LogOut } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
 import { auth } from "../lib/firebase";
 import { grantCompetitionAccess } from "../lib/authApi";
@@ -18,6 +18,38 @@ function formatRange(startDate: string, endDate: string): string {
   return `${start} – ${new Date(`${endDate}T00:00:00`).toLocaleDateString(undefined, opts)}`;
 }
 
+type OpenError = { title: string; body: string; source: "manual" | "list" };
+
+function describeOpenError(err: unknown): Omit<OpenError, "source"> {
+  const code = (err as { code?: string } | null)?.code;
+  if (code === "functions/not-found") {
+    return {
+      title: "Competition not found",
+      body: "Check the ID matches the one in the competition's WCA URL, e.g. WC2025.",
+    };
+  }
+  if (code === "functions/permission-denied" && err instanceof Error) {
+    return { title: "No access", body: err.message };
+  }
+  return { title: "Couldn't open this competition", body: "Check your connection and try again." };
+}
+
+function ErrorNotice({ id, title, body }: { id?: string; title: string; body: string }) {
+  return (
+    <div
+      id={id}
+      role="alert"
+      className="flex gap-2.5 rounded-xl border border-red-200 bg-red-50 px-3.5 py-3 dark:border-red-900/60 dark:bg-red-950/40"
+    >
+      <CircleAlert size={18} aria-hidden className="mt-0.5 shrink-0 text-red-600 dark:text-red-400" />
+      <div>
+        <p className="text-sm font-semibold text-red-800 dark:text-red-200">{title}</p>
+        <p className="text-sm text-red-700 dark:text-red-300">{body}</p>
+      </div>
+    </div>
+  );
+}
+
 /**
  * Login + competition entry. Logged out: a WCA OAuth button. Logged in: a
  * one-tap list of the user's competitions (with manual ID entry as a fallback);
@@ -32,7 +64,7 @@ export default function Login() {
   const [manual, setManual] = useState(false);
   const [competitionId, setCompetitionId] = useState("");
   const [pendingId, setPendingId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<OpenError | null>(null);
   const [recent, setRecent] = useState<MyCompetition[]>([]);
 
   // Recently-ended comps the lead still tracked: those with check data. Resolved
@@ -58,7 +90,7 @@ export default function Login() {
     );
   }
 
-  async function open(id: string, subpath = "") {
+  async function open(id: string, subpath = "", source: OpenError["source"] = "list") {
     const competitionId = id.trim();
     if (!competitionId) return;
     setPendingId(competitionId);
@@ -73,14 +105,14 @@ export default function Login() {
       await auth().currentUser?.getIdToken(true);
       navigate(`/c/${encodeURIComponent(competitionId)}${subpath}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not open this competition.");
+      setError({ ...describeOpenError(err), source });
       setPendingId(null);
     }
   }
 
   function onManualSubmit(e: FormEvent) {
     e.preventDefault();
-    void open(competitionId);
+    void open(competitionId, "", "manual");
   }
 
   if (!user) {
@@ -128,7 +160,11 @@ export default function Login() {
       </header>
 
       <div className="flex-1 overflow-y-auto p-4">
-        {error && <p className="mb-3 text-sm text-red-600 dark:text-red-400">{error}</p>}
+        {error?.source === "list" && (
+          <div className="mb-3">
+            <ErrorNotice title={error.title} body={error.body} />
+          </div>
+        )}
 
         {upcoming.length > 0 ? (
           <ul className="flex flex-col gap-2">
@@ -178,21 +214,43 @@ export default function Login() {
             <form onSubmit={onManualSubmit} className="mt-2 flex gap-2">
               <input
                 value={competitionId}
-                onChange={(e) => setCompetitionId(e.target.value)}
+                onChange={(e) => {
+                  setCompetitionId(e.target.value);
+                  if (error?.source === "manual") setError(null);
+                }}
+                aria-label="Competition ID"
+                aria-invalid={error?.source === "manual"}
+                aria-describedby={error?.source === "manual" ? "manual-error" : undefined}
                 placeholder="e.g. WC2025"
                 autoCapitalize="off"
                 autoCorrect="off"
                 spellCheck={false}
-                className="min-h-12 flex-1 rounded-xl border border-slate-300 bg-white px-4 text-base dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+                className={`min-h-12 min-w-0 flex-1 rounded-xl border bg-white px-4 text-base dark:bg-slate-800 dark:text-slate-100 ${
+                  error?.source === "manual"
+                    ? "border-red-400 dark:border-red-500"
+                    : "border-slate-300 dark:border-slate-600"
+                }`}
               />
               <button
                 type="submit"
                 disabled={pendingId !== null || !competitionId.trim()}
-                className="min-h-12 rounded-xl bg-indigo-600 px-4 font-semibold text-white disabled:opacity-50"
+                className="flex min-h-12 min-w-20 items-center justify-center rounded-xl bg-indigo-600 px-4 font-semibold text-white disabled:opacity-50"
               >
-                Open
+                {pendingId !== null && pendingId === competitionId.trim() ? (
+                  <>
+                    <Loader2 size={20} aria-hidden className="motion-safe:animate-spin" />
+                    <span className="sr-only">Opening…</span>
+                  </>
+                ) : (
+                  "Open"
+                )}
               </button>
             </form>
+          )}
+          {manual && error?.source === "manual" && (
+            <div className="mt-2">
+              <ErrorNotice id="manual-error" title={error.title} body={error.body} />
+            </div>
           )}
         </div>
 
