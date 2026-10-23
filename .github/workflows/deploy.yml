@@ -66,6 +66,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm ci --prefix functions   # build type-checks functions/
       - run: npm run build          # reads committed .env.production (no build secrets needed)
 
       # firebase-tools pinned to 15.22.3: older builds ignore GOOGLE_APPLICATION_CREDENTIALS
@@ -112,6 +113,4 @@ jobs:
         if: steps.functions.outputs.changed == 'true'
         env:
           FUNCTIONS_DISCOVERY_TIMEOUT: 60
-        run: |
-          npm ci --prefix functions
-          npx firebase-tools@15.22.3 deploy --only functions --project team-lead-tracker --non-interactive
+        run: npx firebase-tools@15.22.3 deploy --only functions --project team-lead-tracker --non-interactive
