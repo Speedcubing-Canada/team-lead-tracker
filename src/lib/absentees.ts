@@ -102,7 +102,7 @@ export function summarizeAbsentees(
       summary = { person, missed: [] };
       byRegistrant.set(parsed.registrantId, summary);
     }
-    summary.missed.push({ groupName, note: record.note });
+    summary.missed.push({ groupName, note: record.note ?? "" });
   }
 
   const result = [...byRegistrant.values()];
