@@ -14,7 +14,7 @@ import { StageBoardSkeleton } from "../components/Skeleton";
 export default function StageView() {
   const { competitionId } = useParams();
   const { user } = useAuth();
-  const { data: wcif, isLoading, isError, error } = useWcif(competitionId);
+  const { data: wcif, isLoading, error } = useWcif(competitionId);
   const checks = useChecks(competitionId);
 
   const handlers = useMemo<StageBoardHandlers>(
@@ -34,7 +34,8 @@ export default function StageView() {
   if (isLoading) {
     return <StageBoardSkeleton />;
   }
-  if (isError || !wcif) {
+  // A failed background refetch keeps the cached WCIF; only a first load can fail here.
+  if (!wcif) {
     return (
       <p className="p-6 text-center text-sm text-red-600 dark:text-red-400">
         {error instanceof Error ? error.message : "Could not load this competition."}
