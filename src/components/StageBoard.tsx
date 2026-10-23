@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { Wcif } from "../lib/wca";
 import {
+  compDate,
   defaultGroupIndex,
   defaultStageId,
   groupsForStage,
@@ -29,11 +30,6 @@ export interface StageBoardHandlers {
 
 const NOOP_HANDLERS: StageBoardHandlers = { onStatus: () => {}, onNote: () => {} };
 
-/** Today's calendar date (YYYY-MM-DD) on the same UTC basis as GroupView.date. */
-function todayDate(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
 /**
  * The stage + group to open on, computed once on mount. A saved selection is
  * honoured only *within the same day*: navigating away and back keeps the lead's
@@ -51,7 +47,7 @@ function computeInitialSelection(
   const stored = competitionId ? loadSelection(competitionId) : null;
   const freshStored =
     stored != null &&
-    stored.savedDate === todayDate() &&
+    stored.savedDate === compDate(wcif) &&
     stages.some((s) => s.id === stored.stageId);
 
   if (freshStored) {
@@ -165,7 +161,7 @@ export function StageBoard({
     saveSelection(competitionId, {
       stageId,
       groupActivityId: current.activity.id,
-      savedDate: todayDate(),
+      savedDate: compDate(wcif),
     });
   }, [competitionId, stageId, current?.activity.id]);
 

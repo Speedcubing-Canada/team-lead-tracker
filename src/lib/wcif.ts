@@ -35,9 +35,18 @@ export function isStaffCode(code: string): boolean {
   return code.startsWith("staff");
 }
 
-/** Date portion (YYYY-MM-DD) of an ISO datetime. */
-function dateOf(isoDateTime: string): string {
-  return isoDateTime.slice(0, 10);
+const dateFormats = new Map<string, Intl.DateTimeFormat>();
+
+/**
+ * Calendar date (YYYY-MM-DD) of an instant at the venue, so an evening group
+ * isn't filed under the next UTC day.
+ * ponytail: first venue's timezone; go per-venue if a comp ever spans zones.
+ */
+export function compDate(wcif: Wcif, instant: string | Date = new Date()): string {
+  const timeZone = wcif.schedule.venues[0]?.timezone ?? "UTC";
+  let format = dateFormats.get(timeZone);
+  if (!format) dateFormats.set(timeZone, (format = new Intl.DateTimeFormat("en-CA", { timeZone })));
+  return format.format(new Date(instant));
 }
 
 function eachRoom(wcif: Wcif): WcifRoom[] {
@@ -164,7 +173,7 @@ export function listDays(wcif: Wcif): string[] {
   const dates = new Set<string>();
   for (const room of eachRoom(wcif)) {
     for (const activity of room.activities) {
-      dates.add(dateOf(activity.startTime));
+      dates.add(compDate(wcif, activity.startTime));
     }
   }
   return [...dates].sort();
@@ -243,7 +252,7 @@ export function groupsForRoom(wcif: Wcif, roomId: number): GroupView[] {
           subStage: subStageLabel(round.name, group.name),
           label,
           shortLabel: shortGroupLabel(group.activityCode) ?? label,
-          date: dateOf(group.startTime),
+          date: compDate(wcif, group.startTime),
         };
       }),
     )
@@ -280,13 +289,13 @@ export function stageIdForActivity(wcif: Wcif, activityId: number): string | nul
  * Index into `groupsForStage(stageId)` of the group to land a lead on for `now`:
  * the group currently in progress, else the next upcoming group **today**, else
  * the last group of today once all have ended, else 0 (no groups today, or the
- * stage has none). "Today" is compared on the same date basis as `GroupView.date`.
+ * stage has none). "Today" is the venue-local date, like `GroupView.date`.
  */
 export function defaultGroupIndex(wcif: Wcif, stageId: string, now: Date = new Date()): number {
   const groups = groupsForStage(wcif, stageId);
   if (groups.length === 0) return 0;
 
-  const today = dateOf(now.toISOString());
+  const today = compDate(wcif, now);
   const nowMs = now.getTime();
   let lastTodayIndex = -1;
   for (const [i, g] of groups.entries()) {
@@ -382,7 +391,7 @@ export function deriveStageId(wcif: Wcif, wcaUserId: number, onDate?: string): s
     if (!isStaffCode(assignment.assignmentCode)) continue;
     if (onDate != null) {
       const activity = activityById(wcif, assignment.activityId);
-      if (!activity || dateOf(activity.startTime) !== onDate) continue;
+      if (!activity || compDate(wcif, activity.startTime) !== onDate) continue;
     }
     const stageId = stageIdForActivity(wcif, assignment.activityId);
     if (stageId == null) continue;
@@ -416,7 +425,7 @@ export function relevantStaffDay(wcif: Wcif, wcaUserId: number, today: string): 
   for (const assignment of person.assignments) {
     if (!isStaffCode(assignment.assignmentCode)) continue;
     const activity = activityById(wcif, assignment.activityId);
-    if (activity) days.add(dateOf(activity.startTime));
+    if (activity) days.add(compDate(wcif, activity.startTime));
   }
   if (days.size === 0) return null;
 
@@ -436,7 +445,7 @@ export function defaultStageId(
   wcaUserId: number,
   now: Date = new Date(),
 ): string | null {
-  const today = dateOf(now.toISOString());
+  const today = compDate(wcif, now);
   const day = relevantStaffDay(wcif, wcaUserId, today);
   return (
     (day != null ? deriveStageId(wcif, wcaUserId, day) : null) ??

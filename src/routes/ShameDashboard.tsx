@@ -11,17 +11,12 @@ import {
   overallAbsenceRate,
   summarizeAbsentees,
 } from "../lib/absentees";
-import { defaultStageId, listDays, listStages } from "../lib/wcif";
+import { compDate, defaultStageId, listDays, listStages } from "../lib/wcif";
 import { loadSelection } from "../lib/selection";
 import { AbsenteeBoard } from "../components/AbsenteeBoard";
 import { DashboardSkeleton } from "../components/Skeleton";
 
 type Scope = "team" | "global";
-
-/** Today's calendar date (YYYY-MM-DD), matching StoredSelection.savedDate. */
-function todayDate(): string {
-  return new Date().toISOString().slice(0, 10);
-}
 
 /** Format a YYYY-MM-DD day for the comparison day picker, e.g. "Wed Jul 1". */
 function dayLabel(date: string): string {
@@ -57,7 +52,7 @@ export default function ShameDashboard() {
     const stored = competitionId ? loadSelection(competitionId) : null;
     if (
       stored != null &&
-      stored.savedDate === todayDate() &&
+      stored.savedDate === compDate(wcif) &&
       stages.some((s) => s.id === stored.stageId)
     ) {
       return stored.stageId;
