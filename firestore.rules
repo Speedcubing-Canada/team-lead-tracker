@@ -37,7 +37,8 @@ service cloud.firestore {
         // stored status in request.resource.data, so a note added later still passes.
         allow create, update: if isMember(compId)
           && request.resource.data.updatedByWcaId == member(compId).wcaUserId
-          && (!('note' in request.resource.data) || request.resource.data.note is string)
+          && (!('note' in request.resource.data)
+                || (request.resource.data.note is string && request.resource.data.note.size() <= 500))
           && (('status' in request.resource.data)
                 ? request.resource.data.status in ['present', 'absent']
                 : 'note' in request.resource.data);

@@ -59,6 +59,11 @@ describe("checks", () => {
     await assertFails(setDoc(doc(lead(), CHECK), { ...mark("present"), note: 5 }));
   });
 
+  it("caps notes at 500 characters", async () => {
+    await assertSucceeds(setDoc(doc(lead(), CHECK), { ...mark("present"), note: "x".repeat(500) }));
+    await assertFails(setDoc(doc(lead(), CHECK), { ...mark("present"), note: "x".repeat(501) }));
+  });
+
   it("rejects a check not attributed to the caller's WCA id", async () => {
     await assertFails(setDoc(doc(lead(), CHECK), { status: "present" }));
     await assertFails(setDoc(doc(lead(), CHECK), { ...mark("present"), updatedByWcaId: 2 }));

@@ -125,6 +125,7 @@ export function StaffRow({ person, station, check, onStatus, onNote }: StaffRowP
         <input
           ref={inputRef}
           value={note}
+          maxLength={500}
           onChange={(e) => setNote(e.target.value)}
           onFocus={() => (editing.current = true)}
           onBlur={commitNote}
