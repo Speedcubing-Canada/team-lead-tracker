@@ -1,9 +1,9 @@
 /**
  * Cloud Functions for WCA-gated access.
  *
- * authWithWca         — exchanges a WCA OAuth code for identity and mints a
+ * authWithWca: exchanges a WCA OAuth code for identity and mints a
  *                       Firebase custom token (no competition access yet).
- * grantCompetitionAccess — for the signed-in user, verifies a delegate/organizer/
+ * grantCompetitionAccess: for the signed-in user, verifies a delegate/organizer/
  *                       staff role in the competition's WCIF and writes the
  *                       membership doc that Firestore rules gate on.
  *
@@ -11,7 +11,6 @@
  * security rules), so clients can never grant themselves access.
  */
 
-import { gzipSync } from "node:zlib";
 import { initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
@@ -26,6 +25,7 @@ import {
   fetchPublicWcif,
   fetchWcaIdentity,
 } from "./wca.js";
+import { wcifResponse } from "./wcifProxy.js";
 
 initializeApp();
 
@@ -131,37 +131,8 @@ export const grantCompetitionAccess = onCall(
   },
 );
 
-/**
- * Public WCIF proxy. Fetches the WCA WCIF, slims it to the fields the client
- * uses, gzips it, and returns it with a cache header so Firebase Hosting's CDN
- * edge-caches the (~45× smaller) response. We gzip here ourselves because
- * Hosting only auto-compresses static assets, not dynamic function responses.
- * Used for reloads and routes that don't go through the access-granting flow.
- * Reached via the /api/wcif/** Hosting rewrite, so it's same-origin (no CORS).
- */
+/** WCIF proxy, reached same-origin via the /api/wcif/** Hosting rewrite. */
 export const wcif = onRequest(async (req, res) => {
-  const competitionId = req.path.split("/").filter(Boolean).pop();
-  if (!competitionId) {
-    res.status(400).json({ error: "Missing competition id" });
-    return;
-  }
-  try {
-    const slim = await fetchPublicWcif(decodeURIComponent(competitionId));
-    const body = JSON.stringify(slim);
-    res.set("Cache-Control", "public, max-age=300, s-maxage=300");
-    res.set("Content-Type", "application/json; charset=utf-8");
-    res.set("Vary", "Accept-Encoding");
-    if ((req.headers["accept-encoding"] ?? "").includes("gzip")) {
-      res.set("Content-Encoding", "gzip");
-      res.end(gzipSync(body));
-    } else {
-      res.end(body);
-    }
-  } catch (err) {
-    if (err instanceof HttpsError && err.code === "not-found") {
-      res.status(404).json({ error: err.message });
-      return;
-    }
-    res.status(502).json({ error: `Failed to load competition "${competitionId}"` });
-  }
+  const { status, headers, body } = await wcifResponse(req.path, req.headers["accept-encoding"] ?? "");
+  res.status(status).set(headers).end(body);
 });
