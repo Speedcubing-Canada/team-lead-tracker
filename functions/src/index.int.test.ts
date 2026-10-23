@@ -145,6 +145,13 @@ describe("grantCompetitionAccess", () => {
     await expect(grant(user)).rejects.toMatchObject({ code: "permission-denied" });
     const member = await getFirestore().doc(`competitions/${COMP}/members/${user.uid}`).get();
     expect(member.exists).toBe(false);
+    expect((await getAuth().getUser(user.uid)).customClaims).toBeUndefined();
+  });
+
+  it("rejects a competition id that isn't alphanumeric", async () => {
+    await expect(grant(await signedIn(1001), "a/b")).rejects.toMatchObject({
+      code: "invalid-argument",
+    });
   });
 
   it("grants a delegate privileged access: membership doc, comp doc, claims, slim WCIF", async () => {
@@ -171,13 +178,16 @@ describe("grantCompetitionAccess", () => {
 
   it("grants staff non-privileged access and drops a stale privileged claim", async () => {
     stubWca({ [wcifPath()]: json(rawWcif) });
-    const user = await signedIn(1002, { privilegedComps: { [COMP]: true, Other2026: true } });
+    const user = await signedIn(1002, {
+      comps: { [COMP]: true, Other2026: true },
+      privilegedComps: { [COMP]: true, Other2026: true },
+    });
 
     const res = await grant(user);
 
     expect(res.privileged).toBe(false);
     expect((await getAuth().getUser(user.uid)).customClaims).toEqual({
-      comps: { [COMP]: true },
+      comps: { [COMP]: true, Other2026: true },
       privilegedComps: { Other2026: true },
     });
   });

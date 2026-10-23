@@ -17,7 +17,7 @@ import { getAuth } from "firebase-admin/auth";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { HttpsError, onCall, onRequest } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
-import { canAccessCompetition, isPrivileged } from "./access.js";
+import { canAccessCompetition, isPrivileged, mergeAccessClaims } from "./access.js";
 import type { MyCompetition } from "./competitions.js";
 import type { SlimWcif } from "./wcif.js";
 import {
@@ -88,8 +88,9 @@ export const grantCompetitionAccess = onCall(
     }
 
     const { competitionId } = (request.data ?? {}) as { competitionId?: string };
-    if (!competitionId) {
-      throw new HttpsError("invalid-argument", "competitionId is required");
+    // Used raw as a Firestore path segment and a claims key.
+    if (!competitionId || !/^[A-Za-z0-9]+$/.test(competitionId)) {
+      throw new HttpsError("invalid-argument", "A valid competitionId is required");
     }
 
     const wcif = await fetchPublicWcif(competitionId);
@@ -102,19 +103,14 @@ export const grantCompetitionAccess = onCall(
 
     const privileged = isPrivileged(wcif, wcaUserId);
 
-    // Accumulate per-competition access into the user's Auth custom claims so
-    // Storage rules can gate uploads on the token directly (cross-service
-    // firestore.get from Storage rules proved unreliable). `comps` = every
-    // competition the user is a member of (read access); `privilegedComps` =
-    // those where they're a delegate/organizer (write access). The client
-    // force-refreshes its ID token after this call so the claims take effect.
+    // Claims, not a cross-service firestore.get (unreliable from Storage rules), gate photos.
+    // The client force-refreshes its ID token after this call so they take effect.
     const auth = getAuth();
     const existing = (await auth.getUser(request.auth.uid)).customClaims ?? {};
-    const comps: Record<string, true> = { ...(existing["comps"] ?? {}), [competitionId]: true };
-    const privilegedComps: Record<string, true> = { ...(existing["privilegedComps"] ?? {}) };
-    if (privileged) privilegedComps[competitionId] = true;
-    else delete privilegedComps[competitionId];
-    await auth.setCustomUserClaims(request.auth.uid, { ...existing, comps, privilegedComps });
+    await auth.setCustomUserClaims(
+      request.auth.uid,
+      mergeAccessClaims(existing, competitionId, privileged),
+    );
 
     const db = getFirestore();
     const compRef = db.doc(`competitions/${competitionId}`);

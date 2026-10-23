@@ -31,3 +31,28 @@ export function isPrivileged(wcif: AccessWcif, wcaUserId: number): boolean {
   if (!person) return false;
   return person.roles.some((role) => PRIVILEGED_ROLES.has(role));
 }
+
+type CompClaims = Record<string, true>;
+
+/** Firebase rejects custom claims over 1000 bytes, so only the newest comps are kept. */
+export const MAX_CLAIMED_COMPS = 8;
+
+/**
+ * Storage rules read `comps` (members) and `privilegedComps` (delegates/organizers)
+ * from the token. Re-granting a comp moves it to the newest slot.
+ */
+export function mergeAccessClaims(
+  existing: Record<string, unknown>,
+  competitionId: string,
+  privileged: boolean,
+): Record<string, unknown> {
+  const { [competitionId]: _, ...others } = (existing["comps"] ?? {}) as CompClaims;
+  const ids = [...Object.keys(others), competitionId].slice(-MAX_CLAIMED_COMPS);
+  const oldPrivileged = (existing["privilegedComps"] ?? {}) as CompClaims;
+  const keepsPrivilege = (id: string) => (id === competitionId ? privileged : oldPrivileged[id]);
+  return {
+    ...existing,
+    comps: Object.fromEntries(ids.map((id) => [id, true])),
+    privilegedComps: Object.fromEntries(ids.filter(keepsPrivilege).map((id) => [id, true])),
+  };
+}
