@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fetchPublicWcif } from "./wca";
+import { fetchPublicWcif } from "./wca.js";
 
 afterEach(() => vi.unstubAllGlobals());
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { slimWcif } from "./wcif";
+import { slimWcif } from "./wcif.js";
 
 // A raw WCIF carrying both the fields we keep and bulky fields we drop.
 const raw = {

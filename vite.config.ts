@@ -24,8 +24,44 @@ export default defineConfig({
     },
   },
   test: {
-    environment: "jsdom",
     globals: true,
-    setupFiles: ["./src/test/setup.ts"],
+    coverage: {
+      include: ["src/**", "functions/src/**"],
+      exclude: ["**/*.test.*", "src/test/**", "src/main.tsx"],
+      // Ratchet: raise as coverage grows, never lower.
+      thresholds: { statements: 59, branches: 55, functions: 58, lines: 58 },
+    },
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: "unit",
+          environment: "jsdom",
+          setupFiles: ["./src/test/setup.ts"],
+          include: ["src/**/*.test.{ts,tsx}"],
+          exclude: ["**/*.int.test.*"],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: "functions",
+          environment: "node",
+          include: ["functions/src/**/*.test.ts"],
+          exclude: ["**/*.int.test.*"],
+        },
+      },
+      // Needs the emulators: run via `npm run test:int`.
+      {
+        extends: true,
+        test: {
+          name: "integration",
+          environment: "node",
+          include: ["**/*.int.test.ts"],
+          exclude: ["**/node_modules/**"],
+          fileParallelism: false,
+        },
+      },
+    ],
   },
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canAccessCompetition, isPrivileged, type AccessWcif } from "./access";
+import { canAccessCompetition, isPrivileged, type AccessWcif } from "./access.js";
 
 const wcif: AccessWcif = {
   persons: [
