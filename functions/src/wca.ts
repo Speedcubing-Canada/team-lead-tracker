@@ -1,5 +1,6 @@
 /** Server-side WCA OAuth + API calls used by the auth functions. */
 
+import { HttpsError } from "firebase-functions/v2/https";
 import { slimWcif, type SlimWcif } from "./wcif.js";
 import {
   mergeMyCompetitions,
@@ -90,6 +91,9 @@ export async function fetchPublicWcif(competitionId: string): Promise<SlimWcif> 
   const res = await fetch(
     `${WCA_ORIGIN}/api/v0/competitions/${encodeURIComponent(competitionId)}/wcif/public`,
   );
+  if (res.status === 404) {
+    throw new HttpsError("not-found", `No competition "${competitionId}" on the WCA website.`);
+  }
   if (!res.ok) throw new Error(`Failed to load competition "${competitionId}" (${res.status})`);
   return slimWcif(await res.json());
 }

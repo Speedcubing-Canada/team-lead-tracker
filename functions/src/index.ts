@@ -161,7 +161,11 @@ export const wcif = onRequest(async (req, res) => {
     } else {
       res.end(body);
     }
-  } catch {
+  } catch (err) {
+    if (err instanceof HttpsError && err.code === "not-found") {
+      res.status(404).json({ error: err.message });
+      return;
+    }
     res.status(502).json({ error: `Failed to load competition "${competitionId}"` });
   }
 });
