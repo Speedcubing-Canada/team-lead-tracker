@@ -36,9 +36,11 @@ const denied = (code: string, message = "denied") =>
   vi.mocked(grantCompetitionAccess).mockRejectedValue(Object.assign(new Error(message), { code }));
 
 describe("login screen", () => {
-  it("offers WCA login when signed out", async () => {
+  it("offers WCA login when signed out, storing a fresh OAuth state on tap", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {}); // jsdom can't navigate to WCA
     renderApp("/", { user: null });
-    expect(await screen.findByRole("button", { name: "Log in with WCA" })).toBeInTheDocument();
+    fireEvent.click(await screen.findByRole("button", { name: "Log in with WCA" }));
+    expect(sessionStorage.getItem("wca_oauth_state")).toMatch(/^[0-9a-f-]{36}$/);
   });
 
   it("lists live and upcoming comps, and recently ended ones that have check data", async () => {

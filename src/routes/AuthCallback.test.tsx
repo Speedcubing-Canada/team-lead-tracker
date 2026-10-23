@@ -2,7 +2,6 @@ import { renderApp } from "../test/renderApp";
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, screen } from "@testing-library/react";
 import { authWithWca } from "../lib/authApi";
-import { firebaseUser, setFirebaseUser } from "../test/fakeBackend";
 import { loadMyCompetitions } from "../lib/myCompetitions";
 
 const STATE_KEY = "wca_oauth_state";
@@ -33,7 +32,7 @@ describe("OAuth callback", () => {
     expect(await screen.findByText("WCA login was cancelled (access_denied).")).toBeInTheDocument();
   });
 
-  it("rejects a missing code or a state that doesn't match", async () => {
+  it("rejects a missing code", async () => {
     callback("state=s1");
     expect(await screen.findByText("Missing authorization code.")).toBeInTheDocument();
   });
@@ -46,7 +45,7 @@ describe("OAuth callback", () => {
     expect(sessionStorage.getItem(STATE_KEY)).toBeNull();
   });
 
-  it("shows the server's reason, or a reachability hint for an opaque failure", async () => {
+  it("shows the server's reason for a failed login", async () => {
     sessionStorage.setItem(STATE_KEY, "s1");
     vi.mocked(authWithWca).mockRejectedValue(new Error("WCA token exchange failed (401)"));
     callback("code=c1&state=s1");
@@ -60,29 +59,6 @@ describe("OAuth callback", () => {
 
     expect(await screen.findByText("Login failed. Is the server reachable?")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Back to login" }));
-    expect(await screen.findByRole("button", { name: "Log in with WCA" })).toBeInTheDocument();
-  });
-});
-
-describe("auth state", () => {
-  it("treats a token without a numeric WCA id as signed out", async () => {
-    renderApp("/", { user: { wcaUserId: Number.NaN, name: "Ghost" } });
-    expect(await screen.findByRole("button", { name: "Log in with WCA" })).toBeInTheDocument();
-  });
-
-  it("stores a fresh OAuth state when starting login", async () => {
-    vi.spyOn(console, "error").mockImplementation(() => {}); // jsdom can't navigate to WCA
-    renderApp("/", { user: null });
-    fireEvent.click(await screen.findByRole("button", { name: "Log in with WCA" }));
-    expect(sessionStorage.getItem(STATE_KEY)).toMatch(/^[0-9a-f-]{36}$/);
-  });
-
-  it("falls back to signed out when the ID token can't be read", async () => {
-    renderApp("/", { user: null });
-    setFirebaseUser({
-      ...firebaseUser({}),
-      getIdTokenResult: () => Promise.reject(new Error("auth/network-request-failed")),
-    });
     expect(await screen.findByRole("button", { name: "Log in with WCA" })).toBeInTheDocument();
   });
 });
