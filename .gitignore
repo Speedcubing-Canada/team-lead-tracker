@@ -35,3 +35,7 @@ graphify-out/
 coverage
 test-results
 playwright-report
+
+# Local agent instructions (imports CONTRIBUTING.md + docs/)
+CLAUDE.md
+.claude/

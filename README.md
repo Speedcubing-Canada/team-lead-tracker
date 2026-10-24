@@ -45,5 +45,7 @@ npm run emulators            # Auth, Functions, Firestore + emulator UI
 | `npm run build` | Type-check + production build |
 | `npm test` | Unit tests (Vitest) |
 | `npm run emulators` | Firebase emulator suite |
+| `npm run test:e2e` | E2E journeys (Playwright, against the emulators) |
 
-See [CLAUDE.md](./CLAUDE.md) for architecture details.
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for the dev workflow and
+[docs/architecture.md](./docs/architecture.md) for how it fits together.
