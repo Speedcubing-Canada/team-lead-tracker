@@ -35,8 +35,7 @@ export function WcifGate({
   }
   // WCA matches ids case-insensitively, but Firestore paths don't: move to the canonical id.
   if (wcif.id !== competitionId) {
-    const rest = pathname.split("/").slice(3).join("/");
-    const to = `/c/${encodeURIComponent(wcif.id)}${rest ? `/${rest}` : ""}${search}`;
+    const to = pathname.replace(/^\/c\/[^/]+/, `/c/${encodeURIComponent(wcif.id)}`) + search;
     return <Navigate to={to} replace />;
   }
   return (

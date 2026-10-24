@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
+import { MemoryRouter, Outlet, Route, Routes, useLocation } from "react-router-dom";
 import { WcifGate } from "./WcifGate";
 import { sampleWcif } from "../test/fixtures/wcif";
 
@@ -11,25 +11,40 @@ vi.mock("../lib/useChecks", () => ({ useChecks: () => ({ checks: new Map(), erro
 
 function Where() {
   const { pathname, search } = useLocation();
-  return <p>{pathname + search}</p>;
+  return <p>at {pathname + search}</p>;
 }
 
+/** Mirrors App.tsx: the gate lives in child routes of /c/:competitionId. */
+function renderAt(url: string) {
+  const gate = <WcifGate skeleton={null}>{(_w, id) => <p>loaded {id}</p>}</WcifGate>;
+  render(
+    <MemoryRouter initialEntries={[url]}>
+      <Routes>
+        <Route path="/c/:competitionId" element={<Outlet />}>
+          <Route index element={gate} />
+          <Route path="shame" element={gate} />
+        </Route>
+      </Routes>
+      <Where />
+    </MemoryRouter>,
+  );
+}
+
+const ID = sampleWcif.id;
+
 describe("WcifGate", () => {
-  it("redirects a differently-cased id to WCA's canonical one, keeping the subpath", () => {
-    render(
-      <MemoryRouter initialEntries={[`/c/${sampleWcif.id.toLowerCase()}/dashboard?x=1`]}>
-        <Routes>
-          <Route
-            path="/c/:competitionId/*"
-            element={
-              <WcifGate skeleton={null}>{(_w, id) => <p>loaded {id}</p>}</WcifGate>
-            }
-          />
-        </Routes>
-        <Where />
-      </MemoryRouter>,
-    );
-    expect(screen.getByText(`/c/${sampleWcif.id}/dashboard?x=1`)).toBeInTheDocument();
-    expect(screen.getByText(`loaded ${sampleWcif.id}`)).toBeInTheDocument();
+  it.each([
+    [`/c/${ID.toLowerCase()}`, `/c/${ID}`],
+    [`/c/${ID.toLowerCase()}/shame?x=1`, `/c/${ID}/shame?x=1`],
+  ])("redirects %s to WCA's canonical casing %s", (from, to) => {
+    renderAt(from);
+    expect(screen.getByText(`at ${to}`)).toBeInTheDocument();
+    expect(screen.getByText(`loaded ${ID}`)).toBeInTheDocument();
+  });
+
+  it("renders a canonical URL in place", () => {
+    renderAt(`/c/${ID}/shame`);
+    expect(screen.getByText(`at /c/${ID}/shame`)).toBeInTheDocument();
+    expect(screen.getByText(`loaded ${ID}`)).toBeInTheDocument();
   });
 });

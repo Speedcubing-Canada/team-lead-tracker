@@ -85,15 +85,19 @@ export const grantCompetitionAccess = onCall(
       throw new HttpsError("permission-denied", "Missing WCA identity claim");
     }
 
+    const isCompId = (id: unknown): id is string => typeof id === "string" && /^[A-Za-z0-9]+$/.test(id);
     const { competitionId: requestedId } = (request.data ?? {}) as { competitionId?: string };
-    // Used raw as a Firestore path segment and a claims key.
-    if (!requestedId || !/^[A-Za-z0-9]+$/.test(requestedId)) {
+    if (!isCompId(requestedId)) {
       throw new HttpsError("invalid-argument", "A valid competitionId is required");
     }
 
     const wcif = await fetchPublicWcif(requestedId);
     // WCA matches ids case-insensitively; key everything on its canonical casing.
     const competitionId = wcif.id;
+    // Used raw as a Firestore path segment and a claims key.
+    if (!isCompId(competitionId)) {
+      throw new HttpsError("internal", `WCA returned an unusable competition id "${competitionId}"`);
+    }
     if (!canAccessCompetition(wcif, wcaUserId)) {
       throw new HttpsError(
         "permission-denied",

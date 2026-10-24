@@ -154,4 +154,9 @@ describe("grantCompetitionAccess", () => {
     expect((await getFirestore().doc(`competitions/${COMP}/members/${user.uid}`).get()).exists).toBe(true);
     expect((await getFirestore().doc(`competitions/${typed}`).get()).exists).toBe(false);
   });
+
+  it("refuses a WCA id that isn't safe as a path segment", async () => {
+    stubWca({ [wcifPath()]: json({ ...rawWcif, id: "a/b" }) });
+    await expect(grant(await createUser(1001))).rejects.toMatchObject({ code: "internal" });
+  });
 });
