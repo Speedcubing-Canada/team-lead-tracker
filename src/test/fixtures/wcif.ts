@@ -41,11 +41,11 @@ export const sampleWcif: Wcif = {
         { activityId: 101, assignmentCode: "staff-scrambler", stationNumber: null },
         { activityId: 102, assignmentCode: "staff-runner", stationNumber: null },
       ],
-      // Newcomer without a profile photo — exercises the avatar fallback.
+      // Newcomer without a profile photo; exercises the avatar fallback.
       avatar: null,
     },
     {
-      // Organizer with NO assignments — stage cannot be derived (manual fallback).
+      // Organizer with NO assignments: stage cannot be derived (manual fallback).
       registrantId: 3,
       name: "Carol Clark",
       wcaUserId: 1003,
@@ -56,7 +56,7 @@ export const sampleWcif: Wcif = {
       avatar: null,
     },
     {
-      // Competes on Red Stage but STAFFS on Blue Stage — derivation must pick Blue.
+      // Competes on Red Stage but STAFFS on Blue Stage; derivation must pick Blue.
       registrantId: 4,
       name: "Dave Davis",
       wcaUserId: 1004,

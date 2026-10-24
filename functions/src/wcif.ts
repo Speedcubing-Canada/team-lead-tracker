@@ -1,7 +1,7 @@
 /**
  * Slim WCIF transform.
  *
- * The WCA public WCIF is large (multi-MB) and served uncompressed — most of it
+ * The WCA public WCIF is large (multi-MB) and served uncompressed; most of it
  * (`personalBests`, event results, registration metadata, …) the app never
  * reads. `slimWcif` keeps only the fields the web client's `Wcif` type declares,
  * shrinking the payload ~3.5× before it's gzipped and cached. The shape here is

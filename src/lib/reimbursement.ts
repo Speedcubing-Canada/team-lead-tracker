@@ -11,7 +11,7 @@ import { startedActivityIds } from "./absentees";
  * - `unknown` = a duty no delegate ever ticked present/absent. It is surfaced
  *   for a complete view but does NOT count as missed.
  * - `absentRate` = `absent / total` (total includes unknown), so unmarked duties
- *   dilute rather than inflate the rate — this is what drives the reimbursement
+ *   dilute rather than inflate the rate; this is what drives the reimbursement
  *   tier, keeping unknowns from penalising staff.
  * - `coverage` = `(present + absent) / total`, how much of their load was
  *   actually recorded, so a reviewer can spot low-confidence rows.
@@ -42,7 +42,7 @@ export const DEFAULT_TIERS: Tier[] = [
 /**
  * Per-person staffing totals across the whole competition, worst-first: by
  * absent rate, then by how many duties went unrecorded, then by name. Everyone
- * with at least one started staff assignment appears — even if fully unmarked —
+ * with at least one started staff assignment appears (even if fully unmarked),
  * so nobody silently drops off the reimbursement list.
  */
 export function reimbursementByPerson(
@@ -88,7 +88,7 @@ export function reimbursementByPerson(
 }
 
 /**
- * The reimbursement label for an absence percentage (0–100). Tiers are matched
+ * The reimbursement label for an absence percentage (0-100). Tiers are matched
  * in ascending order of their cap, so the first band whose `maxAbsentPct` covers
  * the value wins; falls back to the last band's label.
  */
@@ -101,7 +101,7 @@ export function tierFor(absentPct: number, tiers: Tier[] = DEFAULT_TIERS): strin
 }
 
 /**
- * How many people land in each tier, in the tiers' own order — drives the
+ * How many people land in each tier, in the tiers' own order; drives the
  * summary chips. Tiers with nobody in them still appear (count 0) so the summary
  * is stable as thresholds change.
  */

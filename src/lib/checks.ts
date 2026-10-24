@@ -108,7 +108,7 @@ export async function writeStatus(
 
 /**
  * Update a staffer's note. Creates a note-only check (no present/absent mark) if
- * none exists — the security rules allow a status-less doc as long as it carries
+ * none exists; the security rules allow a status-less doc as long as it carries
  * a string note.
  */
 export async function writeNote(

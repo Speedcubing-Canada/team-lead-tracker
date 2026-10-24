@@ -145,7 +145,7 @@ describe("absencesByGroup", () => {
       [checkDocId(102, 2), rec("present")], // excluded
     ]);
     expect(absencesByGroup(sampleWcif, checks, AFTER_COMP)).toMatchObject([
-      // Group 101 has 2 staff (Alice + Bob); group 201 has 1 (Dave) — both fully absent.
+      // Group 101 has 2 staff (Alice + Bob); group 201 has 1 (Dave); both fully absent.
       { label: "3x3 R1 · G1", count: 2, total: 2, rate: 1 },
       { label: "4x4 R1 · G1", count: 1, total: 1, rate: 1 },
     ]);
@@ -183,7 +183,7 @@ describe("overallAbsenceRate", () => {
   });
 
   it("counts only started assignments, so the rate isn't diluted early in the comp", () => {
-    // 13:15 — only group 101 has started; staff assigned to it: Alice + Bob = 2.
+    // 13:15: only group 101 has started; staff assigned to it: Alice + Bob = 2.
     const now = new Date("2026-07-01T13:15:00Z");
     const checks = new Map<string, CheckRecord>([
       [checkDocId(101, 1), rec("absent")], // Alice, started -> counts
@@ -232,7 +232,7 @@ describe("currentCompetitionDay", () => {
 });
 
 describe("wilsonLowerBound", () => {
-  it("rewards larger samples at a fixed rate — the core of the fix", () => {
+  it("rewards larger samples at a fixed rate (the core of the fix)", () => {
     // Same 100% rate, more evidence ranks higher: 3/3 > 2/2 > 1/1.
     expect(wilsonLowerBound(3, 3)).toBeGreaterThan(wilsonLowerBound(2, 2));
     expect(wilsonLowerBound(2, 2)).toBeGreaterThan(wilsonLowerBound(1, 1));
@@ -244,7 +244,7 @@ describe("wilsonLowerBound", () => {
     expect(wilsonLowerBound(3, 3)).toBeGreaterThan(wilsonLowerBound(1, 1));
   });
 
-  it("ranks a solid 3/4 above a noisy 1/1 — the case a raw-rate sort gets backwards", () => {
+  it("ranks a solid 3/4 above a noisy 1/1, the case a raw-rate sort gets backwards", () => {
     // Raw rate would put 1/1 (100%) above 3/4 (75%); Wilson flips it on confidence.
     expect(wilsonLowerBound(3, 4)).toBeGreaterThan(wilsonLowerBound(1, 1));
   });

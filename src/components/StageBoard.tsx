@@ -34,7 +34,7 @@ const NOOP_HANDLERS: StageBoardHandlers = { onStatus: () => {}, onNote: () => {}
  * The stage + group to open on, computed once on mount. A saved selection is
  * honoured only *within the same day*: navigating away and back keeps the lead's
  * exact stage + group. Once the day rolls over (or there's no saved selection)
- * we re-derive the stage they're working now — their next upcoming day's stage —
+ * we re-derive the stage they're working now (their next upcoming day's stage)
  * plus that day's current/next group; the mount effect then overwrites the stale
  * localStorage entry with today's date.
  */

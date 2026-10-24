@@ -5,7 +5,7 @@ import { shortGroupLabel } from "./events";
 /**
  * A trackable stage. Usually a WCIF room, but WCA also packs several stages into
  * one room, distinguished only by a token (usually a colour) inside each group's
- * name — so a stage is a room *plus* an optional sub-stage label. `id` is a
+ * name, so a stage is a room *plus* an optional sub-stage label. `id` is a
  * stable string: the bare room id (`"0"`) for a one-stage-per-room comp, or
  * `"{roomId}:{subStage}"` (`"0:Red"`) for a packed room.
  */
@@ -87,10 +87,10 @@ const GROUP_WORDS = new Set(["group", "groupe", "grupo", "gruppe", "gr"]);
 /**
  * The sub-stage label encoded in a group activity's name, relative to its parent
  * round. We take the part of the group name after the round-name prefix and drop
- * the group-number tokens — a bare number, a "g1"-style token, or a group word
+ * the group-number tokens: a bare number, a "g1"-style token, or a group word
  * ("Group"/"Grupo"/…). What's left is the stage token: "" on comps that model
  * each stage as its own room (e.g. "…Round 1, Group 2" → ""), or the stage's
- * name — usually a colour — on comps that pack several stages into one room
+ * name (usually a colour) on comps that pack several stages into one room
  * (e.g. "…Round 1 Red 2" → "Red"). Returns "" when the name doesn't start with
  * the round name (so we never invent a stage from an unexpected format).
  */
@@ -400,7 +400,7 @@ export function staffByDuty(wcif: Wcif, activityId: number): DutyGroup[] {
  * Derive a person's stage from their *staff* assignments: the stage where they
  * have the most staff assignments. Competitor assignments are ignored. When
  * `onDate` (YYYY-MM-DD) is given, only assignments scheduled that day are
- * counted — used to find the stage a lead is working *today*, since at a
+ * counted; used to find the stage a lead is working *today*, since at a
  * multi-day comp the all-time max stage may differ from today's. Counting is by
  * stage id, so a lead on the "Red" half of a packed room derives "Red", not the
  * whole room. Returns null when no (matching) staff assignments exist.
@@ -435,8 +435,8 @@ export function deriveStageId(wcif: Wcif, wcaUserId: number, onDate?: string): s
 /**
  * The calendar day whose stage a lead should land on for `today`: the earliest
  * day they staff that is still `>= today` (so before/at the comp they see their
- * next working day, and each day rolls forward automatically), else — if all
- * their staff assignments are in the past — the last day they staffed. Returns
+ * next working day, and each day rolls forward automatically), else, if all
+ * their staff assignments are in the past, the last day they staffed. Returns
  * null when the person has no staff assignments at all. Competitor assignments
  * are ignored, matching `deriveStageId`.
  */
@@ -458,7 +458,7 @@ export function relevantStaffDay(wcif: Wcif, wcaUserId: number, today: string): 
 
 /**
  * The stage to land a lead on: the stage they're staffing on their most relevant
- * day — today if they staff today, otherwise their next upcoming working day (so
+ * day: today if they staff today, otherwise their next upcoming working day (so
  * before the comp starts they see day 1's stage, not an all-time favourite),
  * falling back to the first stage of the competition. Null only when the
  * competition has no stages.

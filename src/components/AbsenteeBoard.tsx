@@ -90,7 +90,7 @@ export function AbsenteeBoard({
               {missed.map((m, i) => (
                 <li key={i} className="text-sm text-slate-600 dark:text-slate-400">
                   <span className="text-slate-900 dark:text-slate-100">{m.groupName}</span>
-                  {m.note && <span className="text-slate-500 dark:text-slate-400"> — {m.note}</span>}
+                  {m.note && <span className="text-slate-500 dark:text-slate-400">: {m.note}</span>}
                 </li>
               ))}
             </ul>

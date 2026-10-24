@@ -6,14 +6,14 @@ with your WCA account and, for the stage you're responsible for, see each group'
 shared live across all leads of the stage, and a dashboard surfaces everyone not doing their
 assignment so the team can (kindly) follow up.
 
-It builds on the assignment data that [Competitor-Groups](https://www.competitiongroups.com) only
-displays — adding identity, shared tracking, and accountability.
+It builds on the assignment data that [Competition Groups](https://www.competitiongroups.com) only
+displays, adding identity, shared tracking, and accountability.
 
 ## Stack
 
 React + Vite + TypeScript · Tailwind CSS · React Router · TanStack Query · Firebase (Auth /
-Firestore / Cloud Functions / Hosting). Assignment data is read live from the WCA public WCIF; only
-check-off state is persisted.
+Firestore / Storage / Cloud Functions / Hosting). Assignment data is read live from the WCA public
+WCIF; only tracking state (statuses, notes, delegate-uploaded photos) is stored.
 
 ## Getting started
 
@@ -23,27 +23,33 @@ cp .env.example .env.local   # fill in Firebase + WCA OAuth values
 npm run dev                  # http://localhost:5173
 ```
 
-For the auth flow and Firestore rules locally:
+For the auth flow, Cloud Functions and security rules locally, set `VITE_USE_EMULATORS=true` in
+`.env.local` and run:
 
 ```bash
-npm run emulators            # Auth, Functions, Firestore + emulator UI
+npm run emulators            # Auth, Functions, Firestore, Storage + emulator UI
 ```
 
 ### Prerequisites
 
-- **WCA OAuth application** — register at
-  https://www.worldcubeassociation.org/oauth/applications (confidential client). Put the client id /
-  redirect URI in `.env.local`; the **client secret goes into Firebase Functions config**, never the
-  client bundle.
-- **Firebase project** — set its id in `.firebaserc` and the `VITE_FIREBASE_*` values in `.env.local`.
+- **WCA OAuth application**: register one at
+  https://www.worldcubeassociation.org/oauth/applications (confidential client).
+  - Client id and redirect URI go in `.env.local` (`VITE_WCA_*`).
+  - The functions also need the client id: put `WCA_CLIENT_ID=...` in `functions/.env`.
+  - The **client secret never goes in the client bundle**. It is a Functions secret: run
+    `firebase functions:secrets:set WCA_CLIENT_SECRET` for production, or put
+    `WCA_CLIENT_SECRET=...` in `functions/.secret.local` for the emulator.
+- **Firebase project**: set its id in `.firebaserc` and the `VITE_FIREBASE_*` values in `.env.local`.
 
 ## Scripts
 
 | Command | Description |
 | --- | --- |
 | `npm run dev` | Dev server |
-| `npm run build` | Type-check + production build |
+| `npm run build` | Type-check (app + functions tests) + production build |
 | `npm test` | Unit tests (Vitest) |
+| `npm run test:int` | Integration tests (Vitest, against the Auth/Firestore/Storage emulators) |
+| `npm run coverage` | All Vitest suites with coverage |
 | `npm run emulators` | Firebase emulator suite |
 | `npm run test:e2e` | E2E journeys (Playwright, against the emulators) |
 

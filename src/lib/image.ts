@@ -1,9 +1,9 @@
 /**
  * Downscale a user-picked image to a small JPEG before upload. Phone photos are
- * commonly 3–10 MB; the person card only ever shows an 80px avatar, so a ~512px
+ * commonly 3-10 MB; the person card only ever shows an 80px avatar, so a ~512px
  * JPEG keeps Storage tiny and loads fast on venue wifi.
  *
- * Browser/DOM-only (Image + canvas) — kept out of the Firebase I/O layer.
+ * Browser/DOM-only (Image + canvas), kept out of the Firebase I/O layer.
  */
 export async function resizeImageToJpeg(
   file: File,
@@ -13,7 +13,7 @@ export async function resizeImageToJpeg(
   const bitmap = await loadImage(file);
   const { width, height } = bitmap;
   if (!width || !height) {
-    throw new Error("Couldn't read that photo — try a different image");
+    throw new Error("Couldn't read that photo. Try a different image.");
   }
   const scale = Math.min(1, maxDim / Math.max(width, height));
   const w = Math.max(1, Math.round(width * scale));
@@ -52,7 +52,7 @@ async function loadImage(file: File): Promise<ImageBitmap | HTMLImageElement> {
     const img = new Image();
     await new Promise<void>((resolve, reject) => {
       img.onload = () => resolve();
-      img.onerror = () => reject(new Error("Couldn't read that photo — try a different image"));
+      img.onerror = () => reject(new Error("Couldn't read that photo. Try a different image."));
       img.src = url;
     });
     return img;

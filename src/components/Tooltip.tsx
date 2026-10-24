@@ -4,7 +4,7 @@ import { useEffect, useId, useRef, useState, type ReactNode } from "react";
  * A small, dependency-free tooltip tuned for a touch-first app: it reveals on
  * hover/focus (desktop) and on long-press (mobile). Wrap a single interactive
  * child. For elements whose tap performs an action (e.g. present/absent), pass
- * `longPress={false}` so holding doesn't fight the tap — desktop hover/focus
+ * `longPress={false}` so holding doesn't fight the tap; desktop hover/focus
  * still works there.
  */
 export function Tooltip({

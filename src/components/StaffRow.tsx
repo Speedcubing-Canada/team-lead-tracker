@@ -25,7 +25,7 @@ export function StaffRow({ person, station, check, onStatus, onNote }: StaffRowP
   const [note, setNote] = useState(check?.note ?? "");
   const editing = useRef(false);
   // Set on a status button's pointerdown (which precedes the input's blur) so the
-  // ensuing blur skips its own write — the click handler folds the note into the
+  // ensuing blur skips its own write; the click handler folds the note into the
   // status write instead. This keeps a fresh doc from being created note-only,
   // which Firestore rules reject (a check must carry a present/absent status).
   const statusPress = useRef(false);

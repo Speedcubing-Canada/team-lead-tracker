@@ -35,7 +35,7 @@ const UNKNOWN_NOTE =
 function cells(r: StaffTotals, tiers: Tier[]): string[] {
   return [
     r.person.name,
-    r.person.wcaId ?? "—",
+    r.person.wcaId ?? "-",
     String(r.total),
     String(r.present),
     String(r.absent),
@@ -49,7 +49,7 @@ function cells(r: StaffTotals, tiers: Tier[]): string[] {
 /** Markdown report: heading, tier legend, then a table of everyone. */
 export function toMarkdown(rows: StaffTotals[], meta: ReportMeta): string {
   const tierLegend = meta.tiers
-    .map((t) => `- **${t.label}** — ${tierCap(t)} absent`)
+    .map((t) => `- **${t.label}**: ${tierCap(t)} absent`)
     .join("\n");
   const header = `| ${COLUMNS.join(" | ")} |`;
   const divider = `| ${COLUMNS.map(() => "---").join(" | ")} |`;
@@ -58,7 +58,7 @@ export function toMarkdown(rows: StaffTotals[], meta: ReportMeta): string {
     .join("\n");
 
   return [
-    `# Reimbursement — ${meta.competitionName}`,
+    `# Reimbursement: ${meta.competitionName}`,
     "",
     `${meta.dateRange} · generated ${meta.generatedAt.toLocaleDateString()}`,
     "",
@@ -103,7 +103,7 @@ export function toHtml(rows: StaffTotals[], meta: ReportMeta): string {
     )
     .join("\n");
   const legend = meta.tiers
-    .map((t) => `<li><strong>${escapeHtml(t.label)}</strong> — ${tierCap(t)} absent</li>`)
+    .map((t) => `<li><strong>${escapeHtml(t.label)}</strong>: ${tierCap(t)} absent</li>`)
     .join("");
 
   return `<!doctype html>
@@ -111,7 +111,7 @@ export function toHtml(rows: StaffTotals[], meta: ReportMeta): string {
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Reimbursement — ${escapeHtml(meta.competitionName)}</title>
+<title>Reimbursement: ${escapeHtml(meta.competitionName)}</title>
 <style>
   body { font-family: system-ui, -apple-system, sans-serif; margin: 2rem; color: #0f172a; }
   h1 { margin-bottom: 0.25rem; }
@@ -126,7 +126,7 @@ export function toHtml(rows: StaffTotals[], meta: ReportMeta): string {
 </style>
 </head>
 <body>
-<h1>Reimbursement — ${escapeHtml(meta.competitionName)}</h1>
+<h1>Reimbursement: ${escapeHtml(meta.competitionName)}</h1>
 <p class="meta">${escapeHtml(meta.dateRange)} · generated ${escapeHtml(
     meta.generatedAt.toLocaleDateString(),
   )}</p>
@@ -157,7 +157,7 @@ export function toCsv(rows: StaffTotals[], meta: ReportMeta): string {
 }
 
 /**
- * Hand the browser a generated file to download. The only non-pure piece here —
+ * Hand the browser a generated file to download. The only non-pure piece here:
  * builds a Blob, clicks a transient anchor, then revokes the object URL.
  */
 export function triggerDownload(filename: string, mime: string, content: string): void {

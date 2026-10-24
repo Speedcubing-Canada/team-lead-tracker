@@ -6,7 +6,7 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* Montserrat is the app face (headings + body). Registering it as the default
-   sans token makes the framework default apply everywhere — no per-component
+   sans token makes the framework default apply everywhere, no per-component
    font-family classes needed. */
 @theme {
   --font-sans: "Montserrat", ui-sans-serif, system-ui, -apple-system, sans-serif;
