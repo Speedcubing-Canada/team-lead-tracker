@@ -2,7 +2,7 @@ import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
-// https://vite.dev/config/ — config imported from vitest/config so the `test` key is typed.
+// https://vite.dev/config/ (config imported from vitest/config so the `test` key is typed).
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   build: {

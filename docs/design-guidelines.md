@@ -2,16 +2,16 @@
 
 The UI is **mobile-first**: it's used one-handed on a phone by a stage lead at a noisy
 competition. Optimize for quick scanning and large, confident tap targets. These guidelines keep
-the look coherent — follow them when adding or changing UI.
+the look coherent; follow them when adding or changing UI.
 
 ## Typography
 
 - **Font:** Montserrat, everywhere (headings and body). It's self-hosted via
   `@fontsource/montserrat` (weights 400/500/600/700 imported in `src/main.tsx`) so it works
   offline at a venue. It's wired as the default sans through the Tailwind v4 `--font-sans` token in
-  `src/index.css` — so just use normal Tailwind text classes; **don't** set `font-family` per
+  `src/index.css`, so just use normal Tailwind text classes; **don't** set `font-family` per
   component.
-- **Weight hierarchy** — use only these four steps, for these roles:
+- **Weight hierarchy**: use only these four steps, for these roles:
 
   | Class | Weight | Use for |
   |-------|--------|---------|
@@ -21,16 +21,16 @@ the look coherent — follow them when adding or changing UI.
   | `font-bold` | 700 | **reserved** for the top-level app title (the logged-out Login `h1`) only |
 
   Don't reach for `font-light`/`font-extrabold`, and don't use `font-bold` for ordinary headings or
-  numbers — that's what blurred the hierarchy before. Keep `tabular-nums` on aligned figures.
+  numbers; that's what blurred the hierarchy before. Keep `tabular-nums` on aligned figures.
 
 ## Icons
 
 - Use **[Lucide](https://lucide.dev)** (`lucide-react`) for every icon. No emoji, no one-off inline
-  SVGs, no Unicode glyphs (`✓ ✕ ◀ ▶ …`) — they render inconsistently across platforms and break the
+  SVGs, no Unicode glyphs (`✓ ✕ ◀ ▶ …`): they render inconsistently across platforms and break the
   visual system.
-- Standard sizes: **`size={20}`** for primary controls and nav, **`size={16–18}`** for inline/affordance
+- Standard sizes: **`size={20}`** for primary controls and nav, **`size={16}` to `size={18}`** for inline/affordance
   icons, **`size={14}`** for hint markers.
-- Icons are decorative when a text/`aria-label` already names the control — add `aria-hidden`. When an
+- Icons are decorative when a text/`aria-label` already names the control, add `aria-hidden`. When an
   icon is the only label, give it `role="img"` + an `aria-label`.
 - Spinners: `Loader2` with `className="motion-safe:animate-spin"`.
 
@@ -39,7 +39,7 @@ the look coherent — follow them when adding or changing UI.
 - Use the shared **`Tooltip`** (`src/components/Tooltip.tsx`). It's touch-aware: it reveals on
   hover/focus (desktop) and on long-press (mobile).
 - For controls whose **tap performs an action** (present/absent, theme, nav), pass
-  `longPress={false}` so holding doesn't fight the tap — hover/focus still works on desktop, and the
+  `longPress={false}` so holding doesn't fight the tap; hover/focus still works on desktop, and the
   control keeps its `aria-label`.
 - For **static, informational** text (e.g. a metric explanation, a chart's `hint`), allow long-press
   (the default) and give the trigger a `cursor-help` + dotted underline, or an `Info` icon.
@@ -48,7 +48,7 @@ the look coherent — follow them when adding or changing UI.
 
 ## Loading states
 
-- Prefer **skeletons over spinners** for full-screen/route loads — they show the shape of what's
+- Prefer **skeletons over spinners** for full-screen/route loads: they show the shape of what's
   coming. Use the composed skeletons in `src/components/Skeleton.tsx` (`StageBoardSkeleton`,
   `DashboardSkeleton`, `CompListSkeleton`, `ReimbursementSkeleton`), or compose new ones from the
   base `Skeleton` block so they mirror the real layout.
@@ -61,7 +61,7 @@ the look coherent — follow them when adding or changing UI.
 
 - Slate is the neutral base; **indigo-600** is the primary accent (actions, active nav). Status:
   green = present, red = absent; severity badges use emerald → amber → rose.
-- Every surface, border, and text color needs its **`dark:` variant** — the app supports a manual
+- Every surface, border, and text color needs its **`dark:` variant**: the app supports a manual
   light/dark override (`.dark` class). Don't add a color without its dark counterpart.
 
 ## Mobile-first baseline

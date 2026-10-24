@@ -121,7 +121,7 @@ function wcaWcifUrl(competitionId: string): string {
  * slimmed WCIF that Firebase Hosting gzips and CDN-caches (~45× smaller than
  * WCA's uncompressed payload). If the proxy is unavailable (e.g. the Cloud
  * Function didn't deploy) we fall back to fetching WCA directly so the app
- * keeps working — just without the speed-up. In dev there's no Hosting rewrite,
+ * keeps working, just without the speed-up. In dev there's no Hosting rewrite,
  * so we always go straight to WCA.
  */
 export async function fetchPublicWcif(competitionId: string, signal?: AbortSignal): Promise<Wcif> {
@@ -131,7 +131,7 @@ export async function fetchPublicWcif(competitionId: string, signal?: AbortSigna
       if (res.ok) return (await res.json()) as Wcif;
     } catch (err) {
       if (signal?.aborted) throw err;
-      // proxy unreachable — fall through to WCA
+      // proxy unreachable, fall through to WCA
     }
   }
   const res = await fetch(wcaWcifUrl(competitionId), { signal: signal ?? null });

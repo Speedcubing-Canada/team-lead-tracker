@@ -86,7 +86,7 @@ export async function removePersonPhoto(
   try {
     await deleteObject(ref(storage(), storagePath(competitionId, wcaUserId)));
   } catch (err) {
-    // A missing object is fine — we still want to clear the metadata.
+    // A missing object is fine; we still want to clear the metadata.
     if ((err as StorageError).code !== "storage/object-not-found") throw err;
   }
   await deleteDoc(metaRef(competitionId, wcaUserId));
@@ -99,7 +99,7 @@ export function photoDownloadUrl(photoPath: string): Promise<string> {
 
 /**
  * Whether the signed-in user is a privileged member (delegate/organizer) of this
- * competition, read from their own membership doc. UI gating only — the real
+ * competition, read from their own membership doc. UI gating only; the real
  * enforcement is in firestore.rules / storage.rules.
  */
 export async function fetchPrivileged(competitionId: string): Promise<boolean> {

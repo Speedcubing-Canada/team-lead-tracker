@@ -55,8 +55,8 @@ export async function fetchWcaIdentity(accessToken: string): Promise<WcaIdentity
 }
 
 /**
- * Competitions the user is involved in — organizing, delegating, OR registered
- * for — via /competitions/mine (whose `future_competitions` covers not-yet-over
+ * Competitions the user is involved in (organizing, delegating, OR registered
+ * for) via /competitions/mine (whose `future_competitions` covers not-yet-over
  * comps and `past_competitions` the finished ones; unlike /me, both include
  * delegated/organized comps). Works with the `public` scope. Past comps are
  * capped to the recent window (so a lead can still export reimbursement for a

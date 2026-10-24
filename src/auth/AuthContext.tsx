@@ -56,7 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       unsub = onAuthStateChanged(auth(), resolve);
     } catch {
-      // Firebase not configured yet — render as logged out.
+      // Firebase not configured yet: render as logged out.
       setLoading(false);
     }
     return () => {

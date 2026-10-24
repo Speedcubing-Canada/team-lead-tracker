@@ -7,10 +7,10 @@ Setup (prerequisites, `.env.local`) is in the [README](README.md). Read
 ## Commands
 
 - `npm run dev`: Vite dev server (http://localhost:5173).
-- `npm run build`: `tsc -b` (type-check) then `vite build`. Use this as the type-check gate.
+- `npm run build`: `tsc -b` (type-check), `tsc -p functions/tsconfig.test.json` (functions tests), then `vite build`. Use this as the type-check gate.
 - `npm test` / `npm run test:watch`: Vitest. Run a single file: `npx vitest run src/lib/wcif.test.ts`.
   Filter by name: `npx vitest run -t "derives stage"`.
-- `npm run emulators`: Firebase emulator suite (Auth :9099, Functions :5001, Firestore :8080, UI).
+- `npm run emulators`: Firebase emulator suite (Auth :9099, Functions :5001, Firestore :8080, Storage :9199, UI).
 - `npm run test:e2e`: Playwright journeys (`e2e/`) on a phone viewport, against the emulators
   (project `demo-e2e`, `firebase.e2e.json`) and a fake WCA server (`e2e/fakeWca.ts`, :9300).
   Stop `npm run emulators` first (same ports). For one spec: `npm run e2e:emulators` in one
@@ -26,7 +26,7 @@ Setup (prerequisites, `.env.local`) is in the [README](README.md). Read
 - Client env vars must be `VITE_`-prefixed (see `.env.example`). The Firebase web config is safe to
   expose; security is enforced by `firestore.rules`, not by hiding keys. The **WCA client secret is
   not** a `VITE_` var and must never reach the browser.
-- Mobile-first: design for one-handed phone use (large tap targets, min ~48px; primary
+- Mobile-first: design for one-handed phone use (large tap targets, min ~44px; primary
   destinations in the bottom bar; respect `env(safe-area-inset-*)`).
 - UI in short (details in [docs/design-guidelines.md](docs/design-guidelines.md)): Montserrat is
   the app font (default `--font-sans`, don't set `font-family` per component); use the four-step

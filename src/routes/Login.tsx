@@ -17,7 +17,7 @@ function formatRange(startDate: string, endDate: string): string {
   const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
   const start = new Date(`${startDate}T00:00:00`).toLocaleDateString(undefined, opts);
   if (startDate === endDate) return start;
-  return `${start} – ${new Date(`${endDate}T00:00:00`).toLocaleDateString(undefined, opts)}`;
+  return `${start} - ${new Date(`${endDate}T00:00:00`).toLocaleDateString(undefined, opts)}`;
 }
 
 type OpenError = { title: string; body: string; source: "manual" | "list" };

@@ -14,7 +14,7 @@ export interface AbsenteeSummary {
 
 /**
  * A labeled tally, used to drive the shame-page bar charts. `count` is the
- * absences, `total` the denominator they're measured against — the number of
+ * absences, `total` the denominator they're measured against: the number of
  * *marked* duties (present + absent); duties nobody has ticked yes/no yet are
  * excluded so they can't pose as "showed up". `rate` = count / total (0 when 0).
  */
@@ -22,8 +22,8 @@ export interface AbsenceCount {
   label: string;
   count: number;
   total: number;
-  rate: number; // count / total — the % shown in the bar chart
-  score: number; // Wilson lower bound — what the list is sorted by
+  rate: number; // count / total, the % shown in the bar chart
+  score: number; // Wilson lower bound, what the list is sorted by
 }
 
 /** Optional scope for the dashboard selectors: a single stage and/or a single day. */
@@ -37,7 +37,7 @@ export interface Scope {
 /**
  * Ids of the group activities that have already started by `now`, optionally
  * narrowed to one stage and/or one day. Rates are measured against started
- * groups only — counting groups that haven't happened yet would drown every
+ * groups only; counting groups that haven't happened yet would drown every
  * rate in a huge denominator (e.g. 0/54 at the start of the comp).
  */
 export function startedActivityIds(wcif: Wcif, now: Date, scope: Scope = {}): Set<number> {
@@ -56,7 +56,7 @@ export function startedActivityIds(wcif: Wcif, now: Date, scope: Scope = {}): Se
 }
 
 /**
- * A check that lands on a started, in-scope group and a real registrant — i.e. a
+ * A check that lands on a started, in-scope group and a real registrant, i.e. a
  * genuinely *marked* duty. Yields both present and absent so callers can use the
  * full marked set as the denominator and the absent subset as the numerator.
  */
@@ -225,7 +225,7 @@ export function absencesByGroup(
 
 /**
  * The absence rate for the dashboard's summary line: staff duties marked absent
- * over the duties actually *marked* (present + absent) — both restricted to
+ * over the duties actually *marked* (present + absent), both restricted to
  * already-started groups, so the rate is meaningful mid-competition. Unmarked
  * duties are excluded so they can't quietly pad the denominator as if filled.
  * Optionally scoped to a single stage.
@@ -248,7 +248,7 @@ export function overallAbsenceRate(
 
 /**
  * Per-stage absence rates for a single day, so a team can compare itself against
- * the other stages. Scoped to one day because staff rotate stages day to day —
+ * the other stages. Scoped to one day because staff rotate stages day to day,
  * pooling days would blend different teams into the same bar. Stages with any
  * marked duty appear (a clean stage shows at 0%); worst rate first.
  */

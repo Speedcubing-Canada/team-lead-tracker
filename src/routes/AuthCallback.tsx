@@ -33,7 +33,7 @@ export default function AuthCallback() {
       return;
     }
     if (!consumeOAuthState(params.get("state"))) {
-      setError("Login state mismatch — please try logging in again.");
+      setError("Login state mismatch. Please try logging in again.");
       return;
     }
 

@@ -49,7 +49,7 @@ export function PersonSheetProvider({
 
   const photo = person ? (photos?.get(person.wcaUserId) ?? null) : null;
 
-  // Resolve the uploaded photo's download URL only while a card is open — keeps
+  // Resolve the uploaded photo's download URL only while a card is open; keeps
   // the picture bytes strictly on demand.
   useEffect(() => {
     let active = true;

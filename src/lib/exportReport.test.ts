@@ -37,7 +37,7 @@ const rows: StaffTotals[] = [
 
 const meta: ReportMeta = {
   competitionName: "Sample Championship 2026",
-  dateRange: "Jul 1 – Jul 2, 2026",
+  dateRange: "Jul 1 - Jul 2, 2026",
   generatedAt: new Date("2026-07-03T12:00:00Z"),
   tiers: DEFAULT_TIERS,
 };

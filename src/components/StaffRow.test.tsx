@@ -23,7 +23,7 @@ describe("StaffRow notes", () => {
     // Reveal the note input and type, then go straight for the present button.
     // The note must ride along with the status in one write, otherwise a fresh
     // doc gets created without a status (which Firestore rules reject) and the
-    // note is lost — the regression this guards against.
+    // note is lost: the regression this guards against.
     fireEvent.click(screen.getByLabelText("Add note"));
     const input = screen.getByPlaceholderText(/Add a note/);
     fireEvent.focus(input);
@@ -64,7 +64,7 @@ describe("StaffRow notes", () => {
     render(<StaffRow person={person} station={null} onStatus={onStatus} onNote={onNote} />);
 
     // Typing a note for an unmarked staffer and tapping elsewhere persists it as a
-    // note-only check (no present/absent mark) — the reported bug was this note
+    // note-only check (no present/absent mark); the reported bug was this note
     // being silently dropped and lost on navigation.
     fireEvent.click(screen.getByLabelText("Add note"));
     const input = screen.getByPlaceholderText(/Add a note/);

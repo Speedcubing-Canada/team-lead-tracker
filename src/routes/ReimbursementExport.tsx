@@ -25,7 +25,7 @@ const TONE_BADGE: Record<Tone, string> = {
   bad: "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300",
 };
 
-/** Format the comp's first–last scheduled day, e.g. "Jul 1 – Jul 2, 2026". */
+/** Format the comp's first-to-last scheduled day, e.g. "Jul 1 - Jul 2, 2026". */
 function formatDateRange(days: string[]): string {
   const fmt = (d: string, withYear = false) =>
     new Date(`${d}T00:00:00Z`).toLocaleDateString(undefined, {
@@ -37,7 +37,7 @@ function formatDateRange(days: string[]): string {
   const first = days[0];
   const last = days.at(-1);
   if (!first || !last) return "";
-  return first === last ? fmt(first, true) : `${fmt(first)} – ${fmt(last, true)}`;
+  return first === last ? fmt(first, true) : `${fmt(first)} - ${fmt(last, true)}`;
 }
 
 /** A short, human cap for a tier band, e.g. "≤5%" or "rest". */
@@ -204,10 +204,10 @@ function Export({
         )}
       </section>
 
-      {/* Roster: one card per person — fits a phone, no horizontal scroll. */}
+      {/* Roster: one card per person; fits a phone, no horizontal scroll. */}
       {rows.length === 0 ? (
         <p className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
-          No staff assignments have started yet — nothing to report.
+          No staff assignments have started yet, so there's nothing to report.
         </p>
       ) : (
         <ul className="flex flex-col gap-2">

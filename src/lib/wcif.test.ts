@@ -193,8 +193,8 @@ describe("stageIdForActivity", () => {
 });
 
 describe("defaultGroupIndex", () => {
-  // Red Stage (room 1) groups, sorted: [101 (07-01 13:00–13:30Z), 102 (07-01
-  // 13:30–14:00Z), 111 (07-02 09:00–09:30Z)].
+  // Red Stage (room 1) groups, sorted: [101 (07-01 13:00-13:30Z), 102 (07-01
+  // 13:30-14:00Z), 111 (07-02 09:00-09:30Z)].
   it("picks the in-progress group", () => {
     expect(defaultGroupIndex(sampleWcif, "1", new Date("2026-07-01T13:15:00Z"))).toBe(0);
     expect(defaultGroupIndex(sampleWcif, "1", new Date("2026-07-01T13:45:00Z"))).toBe(1);
@@ -227,7 +227,7 @@ describe("defaultGroupIndex", () => {
   });
 
   it("indexes within a single sub-stage of a packed room", () => {
-    // Red groups [501 13:00–13:30, 502 13:30–14:00]; at 13:45 the second is live.
+    // Red groups [501 13:00-13:30, 502 13:30-14:00]; at 13:45 the second is live.
     expect(defaultGroupIndex(multiStageWcif, "5:Red", new Date("2026-07-01T13:45:00Z"))).toBe(1);
   });
 });
@@ -279,7 +279,7 @@ describe("staffByDuty", () => {
   });
 
   it("sorts people by station number ascending (numerically, not lexically)", () => {
-    // Stations 2, 3 (Alice), 10 — must come out 2, 3, 10, not 10, 2, 3.
+    // Stations 2, 3 (Alice), 10: must come out 2, 3, 10, not 10, 2, 3.
     const judges = staffByDuty(withJudges(judge("Zoe Zhang", 10), judge("Mona Mills", 2)), 101)[0]!;
     expect(judges.staff.map((s) => s.stationNumber)).toEqual([2, 3, 10]);
     expect(judges.staff.map((s) => s.person.name)).toEqual(["Mona Mills", "Alice Anderson", "Zoe Zhang"]);
@@ -356,7 +356,7 @@ describe("defaultStageId", () => {
   });
 
   it("prefers the stage staffed *today* over the all-time stage", () => {
-    // P staffs room A (1) twice — but both on day 2; on day 1 P is on room B (2).
+    // P staffs room A (1) twice, but both on day 2; on day 1 P is on room B (2).
     // All-time favours A; day-1 detection must pick B.
     const wcif: Wcif = {
       formatVersion: "1.0",
