@@ -40,6 +40,7 @@ test("after signing out, the next lead on the same phone lands on their own stag
   await expect(page.getByLabel("Stage").locator("option:checked")).toHaveText("Blue Stage");
   await page.getByRole("link", { name: "Comps" }).click();
   await page.getByRole("button", { name: "Sign out" }).click();
+  await expect(page.getByRole("button", { name: "Log in with WCA" })).toBeVisible();
 
   await openComp(page, USERS.bob);
   await expect(page.getByLabel("Stage").locator("option:checked")).toHaveText("Red Stage");

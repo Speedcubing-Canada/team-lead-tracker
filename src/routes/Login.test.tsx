@@ -2,7 +2,7 @@ import { pinClock, renderApp } from "../test/renderApp";
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { FunctionsError, type FunctionsErrorCodeCore } from "firebase/functions";
-import { fakeAuth, wcaFetch } from "../test/fakeBackend";
+import { fakeAuth, firebaseAuth, wcaFetch } from "../test/fakeBackend";
 import { sampleWcif } from "../test/fixtures/wcif";
 import { grantCompetitionAccess } from "../lib/authApi";
 import { hasCheckData } from "../lib/recentComps";
@@ -133,6 +133,15 @@ describe("login screen", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Sign out" }));
     expect(await screen.findByRole("button", { name: "Log in with WCA" })).toBeInTheDocument();
     expect(loadMyCompetitions()).toEqual([]);
+  });
+
+  it("keeps the comp list while sign-out is still pending", async () => {
+    storeMyCompetitions([live]);
+    vi.mocked(firebaseAuth.signOut).mockReturnValueOnce(new Promise(() => {}));
+    renderApp("/");
+
+    fireEvent.click(await screen.findByRole("button", { name: "Sign out" }));
+    expect(loadMyCompetitions()).toEqual([live]);
   });
 
   it("shows progress on a live comp while access is checked", async () => {
