@@ -1,11 +1,10 @@
 import { readFile } from "node:fs/promises";
-import { COMP, FAKE_WCA, USERS } from "./fakeWca";
-import { expect, firstGroup, openComp, pressed, row, test } from "./fixtures";
+import { COMP, USERS } from "./fakeWca";
+import { atVenue, expect, firstGroup, openComp, pressed, row, test } from "./fixtures";
 
 test.beforeEach(async ({ page, request }) => {
   // Day 1's groups end by 16:00 UTC; before they've run there's nothing to report.
-  const wcif = await (await request.get(`${FAKE_WCA}/api/v0/competitions/${COMP}/wcif/public`)).json();
-  await page.clock.setFixedTime(new Date(`${wcif.schedule.startDate}T17:00:00Z`));
+  await atVenue(page, request, "17:00");
   await openComp(page, USERS.bob);
   await firstGroup(page);
   await row(page, "Alice Anderson").getByRole("button", { name: "Present" }).click();
