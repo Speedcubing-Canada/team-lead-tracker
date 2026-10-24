@@ -72,8 +72,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = useCallback(() => {
-    clearMyCompetitions();
-    void firebaseSignOut(auth());
+    // Only once signed out: an interrupted sign-out must not leave a signed-in user with no comps.
+    void firebaseSignOut(auth()).then(clearMyCompetitions);
   }, []);
 
   return (

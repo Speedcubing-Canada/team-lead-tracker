@@ -79,5 +79,11 @@ export const row = (page: Page, name: string) => page.getByRole("listitem").filt
 /** Show the first group of the stage: Alice judges it, Bob scrambles it. */
 export const firstGroup = (page: Page) => page.getByLabel("Group", { exact: true }).selectOption({ index: 0 });
 
+/** Pin the browser clock to a UTC time on day 1, read from the fake WCA so a run across midnight agrees with it. */
+export async function atVenue(page: Page, request: APIRequestContext, utc: string) {
+  const { schedule } = await (await request.get(`${FAKE_WCA}/api/v0/competitions/${COMP}/wcif/public`)).json();
+  await page.clock.setFixedTime(new Date(`${schedule.startDate}T${utc}:00Z`));
+}
+
 export const pressed = (page: Page, name: string, mark: "Present" | "Absent") =>
   expect(row(page, name).getByRole("button", { name: mark })).toHaveAttribute("aria-pressed", "true");

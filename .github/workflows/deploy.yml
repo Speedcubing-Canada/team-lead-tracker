@@ -1,6 +1,6 @@
 name: Deploy (prod)
 
-# pull request → test (no deploy); push to main → test → deploy hosting, Firestore/Storage rules and functions.
+# pull request → build, integration, e2e (no deploy); push to main → those → deploy hosting, Firestore/Storage rules and functions.
 on:
   push:
     branches: [main]
@@ -17,8 +17,22 @@ permissions:
   actions: read
 
 jobs:
-  test:
-    name: Test & build
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm ci --prefix functions
+      - run: npm run build
+
+  # Coverage spans every test project, unit included, so it runs with the emulators up.
+  integration:
+    name: All tests & coverage
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -35,14 +49,42 @@ jobs:
           path: ~/.cache/firebase/emulators
           key: firebase-emulators-${{ hashFiles('package-lock.json') }}
       - run: npm ci
-      - run: npm ci --prefix functions   # root vitest also runs functions/ tests
-      - run: npm run coverage            # every test project, inside the emulators
-      - run: npm run build
-      - run: npm --prefix functions run build
+      - run: npm ci --prefix functions
+      - run: npm run coverage
+
+  e2e:
+    name: E2E (Playwright)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: actions/cache@v6
+        with:
+          path: ~/.cache/firebase/emulators
+          key: firebase-emulators-${{ hashFiles('package-lock.json') }}
+      - run: npm ci
+      - run: npm ci --prefix functions
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
 
   deploy:
     name: Deploy → Production
-    needs: test
+    needs: [build, integration, e2e]
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
