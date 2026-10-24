@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { useParams } from "react-router-dom";
+import { Navigate, useLocation, useParams } from "react-router-dom";
 import { useWcif } from "../lib/useWcif";
 import { useChecks } from "../lib/useChecks";
 import type { CheckRecord } from "../lib/checks";
@@ -20,6 +20,7 @@ export function WcifGate({
   const { competitionId } = useParams();
   const { data: wcif, isLoading, error } = useWcif(competitionId);
   const { checks, error: checksError } = useChecks(competitionId);
+  const { pathname, search } = useLocation();
   if (isLoading) return skeleton;
   // A failed background refetch keeps the cached WCIF; only a failed first load lands here.
   if (!wcif || !competitionId) {
@@ -31,6 +32,12 @@ export function WcifGate({
         />
       </div>
     );
+  }
+  // WCA matches ids case-insensitively, but Firestore paths don't: move to the canonical id.
+  if (wcif.id !== competitionId) {
+    const rest = pathname.split("/").slice(3).join("/");
+    const to = `/c/${encodeURIComponent(wcif.id)}${rest ? `/${rest}` : ""}${search}`;
+    return <Navigate to={to} replace />;
   }
   return (
     <>

@@ -142,4 +142,16 @@ describe("grantCompetitionAccess", () => {
     expect((await grant(user)).privileged).toBe(false);
     expect(await claimsOf(user)).toEqual({ comps: { [COMP]: true }, privilegedComps: {} });
   });
+
+  it("keys access on WCA's canonical id when the caller types another casing", async () => {
+    const typed = COMP.toLowerCase();
+    stubWca({ [wcifPath(typed)]: json(rawWcif) });
+    const user = await createUser(1001);
+
+    await grant(user, typed);
+
+    expect(await claimsOf(user)).toEqual({ comps: { [COMP]: true }, privilegedComps: { [COMP]: true } });
+    expect((await getFirestore().doc(`competitions/${COMP}/members/${user.uid}`).get()).exists).toBe(true);
+    expect((await getFirestore().doc(`competitions/${typed}`).get()).exists).toBe(false);
+  });
 });

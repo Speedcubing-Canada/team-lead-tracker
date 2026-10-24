@@ -85,11 +85,11 @@ export default function Login() {
       const { wcif } = await grantCompetitionAccess(competitionId);
       // Seed the cache with the WCIF the function already fetched, so StageView
       // renders without re-downloading it (within the query's staleTime).
-      queryClient.setQueryData(["wcif", competitionId], wcif);
+      queryClient.setQueryData(["wcif", wcif.id], wcif);
       // Pull the freshly-set comps/privilegedComps claims into the active ID
       // token so Storage rules (which read the token) authorize this session.
       await auth().currentUser?.getIdToken(true);
-      navigate(`/c/${encodeURIComponent(competitionId)}${subpath}`);
+      navigate(`/c/${encodeURIComponent(wcif.id)}${subpath}`);
     } catch (err) {
       setError({ ...describeOpenError(err), source });
       setPendingId(null);
